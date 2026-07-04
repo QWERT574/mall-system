@@ -1,0 +1,98 @@
+<view class="bg-page">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="header-title">📍 收货地址</text>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container full-page-loading">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载地址中...</text>
+  </view>
+  
+  <!-- 错误提示 -->
+  <view wx:elif="{{error}}" class="empty-state">
+    <text class="empty-icon">❌</text>
+    <text class="empty-title">加载失败</text>
+    <text class="empty-desc">{{error}}</text>
+    <view class="empty-action" bindtap="loadAddresses">重新加载</view>
+  </view>
+  
+  <!-- 地址列表 -->
+  <view wx:else>
+    <!-- 地址列表 -->
+    <view wx:if="{{addresses.length > 0}}" class="address-list">
+      <view wx:for="{{addresses}}" wx:key="id" class="address-card fade-in">
+        <view class="address-header">
+          <view class="address-user">
+            <text class="recipient">{{item.consignee}}</text>
+            <text class="phone">{{item.phone}}</text>
+          </view>
+          <view wx:if="{{item.isDefault}}" class="default-tag">✓ 默认</view>
+        </view>
+        <view class="address-content">
+          <text class="address-text">{{item.province}}{{item.city}}{{item.district}}{{item.detail}}</text>
+        </view>
+        <view class="address-actions">
+          <view bindtap="selectAddress" data-address="{{item}}" class="action-item select-item">
+            <text>选择</text>
+          </view>
+          <view bindtap="setDefaultAddress" data-id="{{item.id}}" class="action-item default-item">
+            <text>{{item.isDefault ? '取消默认' : '设为默认'}}</text>
+          </view>
+          <view bindtap="editAddress" data-id="{{item.id}}" class="action-item edit-item">
+            <text>编辑</text>
+          </view>
+          <view bindtap="deleteAddress" data-id="{{item.id}}" class="action-item delete-item">
+            <text>删除</text>
+          </view>
+        </view>
+      </view>
+    </view>
+      
+      <!-- 空地址提示 -->
+      <view wx:else class="empty-address">
+        <text>暂无收货地址</text>
+      </view>
+      
+      <!-- 添加地址按钮 -->
+      <button bindtap="addAddress" class="btn-primary add-address-btn">
+        + 添加新地址
+      </button>
+      
+      <!-- 编辑/添加地址表单 -->
+      <view wx:if="{{isEditMode || isAddMode}}" class="address-form">
+        <view class="form-header">
+          <text>{{isEditMode ? '编辑地址' : '添加新地址'}}</text>
+          <button bindtap="cancelEdit" class="cancel-btn">取消</button>
+        </view>
+        <form bindsubmit="saveAddress">
+          <view class="form-item">
+            <text class="form-label">收件人</text>
+            <input name="recipient" placeholder="请输入收件人姓名" value="{{currentAddress ? currentAddress.consignee : ''}}" class="form-input" />
+          </view>
+          <view class="form-item">
+            <text class="form-label">手机号</text>
+            <input name="phone" placeholder="请输入手机号" type="number" value="{{currentAddress ? currentAddress.phone : ''}}" class="form-input" />
+          </view>
+          <view class="form-item">
+            <text class="form-label">省份</text>
+            <input name="province" placeholder="请输入省份" value="{{currentAddress ? currentAddress.province : ''}}" class="form-input" />
+          </view>
+          <view class="form-item">
+            <text class="form-label">城市</text>
+            <input name="city" placeholder="请输入城市" value="{{currentAddress ? currentAddress.city : ''}}" class="form-input" />
+          </view>
+          <view class="form-item">
+            <text class="form-label">区/县</text>
+            <input name="district" placeholder="请输入区/县" value="{{currentAddress ? currentAddress.district : ''}}" class="form-input" />
+          </view>
+          <view class="form-item">
+            <text class="form-label">详细地址</text>
+            <textarea name="detailAddress" placeholder="请输入详细地址" value="{{currentAddress ? currentAddress.detail : ''}}" class="form-textarea" />
+          </view>
+          <button form-type="submit" class="btn-primary save-btn">保存</button>
+        </form>
+      </view>
+    </view>
+</view>

@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" font-family="Microsoft YaHei, Arial, sans-serif">
+  <defs>
+    <!-- UML 标准：include / extend 用开口箭头 -->
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="#000" stroke-width="1.4" />
+    </marker>
+  </defs>
+
+  <!-- 白底 -->
+  <rect x="0" y="0" width="1200" height="720" fill="#ffffff" />
+
+  <style>
+    .uc { fill: #fff; stroke: #000; stroke-width: 1.4; }
+    .uc-text { font-size: 15px; fill: #000; text-anchor: middle; dominant-baseline: middle; }
+    .boundary { fill: none; stroke: #000; stroke-width: 2; }
+    .line { stroke: #000; stroke-width: 1.1; fill: none; }
+    .dashed-line { stroke: #000; stroke-width: 1.2; stroke-dasharray: 6 4; fill: none; }
+    .label { font-size: 12px; fill: #000; text-anchor: middle; dominant-baseline: middle; }
+    .label-bg { fill: #fff; stroke: none; }
+    .actor-text { font-size: 16px; fill: #000; text-anchor: middle; dominant-baseline: hanging; font-weight: 600; }
+    .actor { stroke: #000; stroke-width: 1.6; fill: #fff; }
+  </style>
+
+  <!-- ========== 系统边界（无标题） ========== -->
+  <rect class="boundary" x="130" y="80" width="940" height="500" />
+
+  <!-- ========== 关联线 ==========
+       线段终点精确计算到椭圆边缘（不进椭圆体），保证不穿过任何文字 -->
+
+  <!-- 买家 → 11 个用例（从 (68,500) 出发，终点落在椭圆左缘） -->
+  <g class="line">
+    <line x1="68" y1="500" x2="253" y2="172" />
+    <line x1="68" y1="500" x2="250" y2="242" />
+    <line x1="68" y1="500" x2="245" y2="312" />
+    <line x1="68" y1="500" x2="235" y2="381" />
+    <line x1="68" y1="500" x2="469" y2="171" />
+    <line x1="68" y1="500" x2="463" y2="241" />
+    <line x1="68" y1="500" x2="454" y2="310" />
+    <line x1="68" y1="500" x2="687" y2="170" />
+    <line x1="68" y1="500" x2="679" y2="240" />
+    <line x1="68" y1="500" x2="667" y2="308" />
+    <line x1="68" y1="500" x2="651" y2="376" />
+  </g>
+
+  <!-- 商家 → 3 个用例（从 (1132,500) 出发，终点落在椭圆右缘） -->
+  <g class="line">
+    <line x1="1132" y1="500" x2="966" y2="172" />
+    <line x1="1132" y1="500" x2="969" y2="242" />
+    <line x1="1132" y1="500" x2="973" y2="312" />
+  </g>
+
+  <!-- ========== 用例椭圆（在关联线之上，渲染顺序保证） ========== -->
+
+  <!-- 列 1：商品浏览 -->
+  <ellipse class="uc" cx="265" cy="150" rx="105" ry="22" />
+  <text class="uc-text" x="265" y="150">浏览商品列表</text>
+  <ellipse class="uc" cx="265" cy="220" rx="105" ry="22" />
+  <text class="uc-text" x="265" y="220">搜索商品</text>
+  <ellipse class="uc" cx="265" cy="290" rx="105" ry="22" />
+  <text class="uc-text" x="265" y="290">查看商品详情</text>
+  <ellipse class="uc" cx="265" cy="360" rx="105" ry="22" />
+  <text class="uc-text" x="265" y="360">分类筛选</text>
+
+  <!-- 列 2：购物车 -->
+  <ellipse class="uc" cx="495" cy="150" rx="105" ry="22" />
+  <text class="uc-text" x="495" y="150">添加购物车</text>
+  <ellipse class="uc" cx="495" cy="220" rx="105" ry="22" />
+  <text class="uc-text" x="495" y="220">修改数量</text>
+  <ellipse class="uc" cx="495" cy="290" rx="105" ry="22" />
+  <text class="uc-text" x="495" y="290">删除购物车项</text>
+
+  <!-- 列 3：订单 -->
+  <ellipse class="uc" cx="725" cy="150" rx="105" ry="22" />
+  <text class="uc-text" x="725" y="150">创建订单</text>
+  <ellipse class="uc" cx="725" cy="220" rx="105" ry="22" />
+  <text class="uc-text" x="725" y="220">订单支付</text>
+  <ellipse class="uc" cx="725" cy="290" rx="105" ry="22" />
+  <text class="uc-text" x="725" y="290">取消订单</text>
+  <ellipse class="uc" cx="725" cy="360" rx="105" ry="22" />
+  <text class="uc-text" x="725" y="360">查看物流信息</text>
+
+  <!-- 列 4：商家管理 -->
+  <ellipse class="uc" cx="955" cy="150" rx="105" ry="22" />
+  <text class="uc-text" x="955" y="150">确认收货</text>
+  <ellipse class="uc" cx="955" cy="220" rx="105" ry="22" />
+  <text class="uc-text" x="955" y="220">填写物流单号</text>
+  <ellipse class="uc" cx="955" cy="290" rx="105" ry="22" />
+  <text class="uc-text" x="955" y="290">查看订单详情</text>
+
+  <!-- ========== 演员：UML 标准火柴人 ========== -->
+  <g class="actor">
+    <circle cx="60" cy="510" r="9" />
+    <line x1="60" y1="519" x2="60" y2="558" />
+    <line x1="60" y1="528" x2="38" y2="548" />
+    <line x1="60" y1="528" x2="82" y2="548" />
+    <line x1="60" y1="558" x2="42" y2="588" />
+    <line x1="60" y1="558" x2="78" y2="588" />
+  </g>
+  <text class="actor-text" x="60" y="600">买家</text>
+
+  <g class="actor">
+    <circle cx="1140" cy="510" r="9" />
+    <line x1="1140" y1="519" x2="1140" y2="558" />
+    <line x1="1140" y1="528" x2="1118" y2="548" />
+    <line x1="1140" y1="528" x2="1162" y2="548" />
+    <line x1="1140" y1="558" x2="1122" y2="588" />
+    <line x1="1140" y1="558" x2="1158" y2="588" />
+  </g>
+  <text class="actor-text" x="1140" y="600">商家</text>
+
+  <!-- ========== include / extend 关系（标签全部避开线条） ========== -->
+  <!-- 1. 查看商品详情 extend 到 添加购物车（标签置于线段左侧空白处） -->
+  <line class="dashed-line" x1="370" y1="290" x2="390" y2="150" marker-end="url(#openArrow)" />
+  <rect class="label-bg" x="290" y="213" width="68" height="14" />
+  <text class="label" x="324" y="221">&lt;&lt;extend&gt;&gt;</text>
+
+  <!-- 2. 创建订单 include 到 订单支付（垂直短线，标签在右侧空白处） -->
+  <line class="dashed-line" x1="725" y1="172" x2="725" y2="198" marker-end="url(#openArrow)" />
+  <rect class="label-bg" x="740" y="178" width="62" height="14" />
+  <text class="label" x="771" y="186">&lt;&lt;include&gt;&gt;</text>
+
+  <!-- 3. 确认收货 include 到 填写物流单号 -->
+  <line class="dashed-line" x1="955" y1="172" x2="955" y2="198" marker-end="url(#openArrow)" />
+  <rect class="label-bg" x="970" y="178" width="62" height="14" />
+  <text class="label" x="1001" y="186">&lt;&lt;include&gt;&gt;</text>
+</svg>

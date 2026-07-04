@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" font-family="Microsoft YaHei, Arial, sans-serif">
+  <defs>
+    <!-- UML 标准：箭头 -->
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto">
+      <path d="M0,0 L10,5 L0,10" fill="none" stroke="#000" stroke-width="1.4" />
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="720" fill="#ffffff" />
+
+  <style>
+    .uc { fill: #fff; stroke: #000; stroke-width: 1.4; }
+    .uc-text { font-size: 15px; fill: #000; text-anchor: middle; dominant-baseline: middle; }
+    .boundary { fill: none; stroke: #000; stroke-width: 2; }
+    .sub-boundary { fill: none; stroke: #000; stroke-width: 1.2; stroke-dasharray: 6 4; }
+    .sub-label { font-size: 12px; fill: #000; text-anchor: middle; font-weight: 600; }
+    .line { stroke: #000; stroke-width: 1.1; fill: none; }
+    .bus-line { stroke: #000; stroke-width: 1.1; fill: none; }
+    .actor-text { font-size: 16px; fill: #000; text-anchor: middle; dominant-baseline: hanging; font-weight: 600; }
+    .actor { stroke: #000; stroke-width: 1.6; fill: #fff; }
+  </style>
+
+  <!-- ========== 系统边界（无标题） ========== -->
+  <rect class="boundary" x="130" y="60" width="940" height="600" />
+
+  <!-- ========== 子系统边界（虚线） ========== -->
+  <!-- AI 智能助手 子边界（左上） -->
+  <rect class="sub-boundary" x="180" y="90" width="180" height="290" />
+  <text class="sub-label" x="270" y="108">AI 智能助手</text>
+
+  <!-- 多端访问 子边界（左下，紧贴买家） -->
+  <rect class="sub-boundary" x="180" y="450" width="380" height="80" />
+  <text class="sub-label" x="370" y="468">多端访问</text>
+
+  <!-- ========== 关联线（在椭圆之下） ========== -->
+
+  <!-- 买家 → AI 智能助手 4 个用例（短斜线） -->
+  <g class="line">
+    <line x1="60" y1="315" x2="242" y2="151" />
+    <line x1="60" y1="315" x2="230" y2="220" />
+    <line x1="60" y1="315" x2="203" y2="284" />
+    <line x1="60" y1="315" x2="192" y2="331" />
+  </g>
+
+  <!-- 买家 → 通讯 3 个用例（共享水平段 + 折线，避免穿过 AI 子边界） -->
+  <line class="bus-line" x1="60" y1="315" x2="400" y2="315" />
+  <g class="line">
+    <line x1="400" y1="315" x2="515" y2="250" />
+    <line x1="400" y1="315" x2="471" y2="313" />
+    <line x1="400" y1="315" x2="512" y2="371" />
+  </g>
+
+  <!-- 买家 → 多端访问 2 个用例 -->
+  <g class="line">
+    <line x1="60" y1="315" x2="241" y2="469" />
+    <line x1="60" y1="315" x2="450" y2="472" />
+  </g>
+
+  <!-- 商家 → 通讯 3 个用例（共享双方都参与的即时通讯功能） -->
+  <g class="line">
+    <line x1="1140" y1="315" x2="621" y2="240" />
+    <line x1="1140" y1="315" x2="630" y2="311" />
+    <line x1="1140" y1="315" x2="623" y2="381" />
+  </g>
+
+  <!-- 商家 → 商家后台 2 个用例 -->
+  <g class="line">
+    <line x1="1140" y1="315" x2="885" y2="170" />
+    <line x1="1140" y1="315" x2="905" y2="246" />
+  </g>
+
+  <!-- ========== 用例椭圆（在关联线之上） ========== -->
+
+  <!-- 列 1：AI 智能助手（4 个平行用例，无 include 关系） -->
+  <ellipse class="uc" cx="265" cy="130" rx="80" ry="22" />
+  <text class="uc-text" x="265" y="130">智能问答</text>
+  <ellipse class="uc" cx="265" cy="200" rx="80" ry="22" />
+  <text class="uc-text" x="265" y="200">商品推荐</text>
+  <ellipse class="uc" cx="265" cy="270" rx="80" ry="22" />
+  <text class="uc-text" x="265" y="270">订单查询</text>
+  <ellipse class="uc" cx="265" cy="340" rx="80" ry="22" />
+  <text class="uc-text" x="265" y="340">售后指引</text>
+
+  <!-- 列 2：通讯（3 个，买家与商家共享） -->
+  <ellipse class="uc" cx="550" cy="230" rx="80" ry="22" />
+  <text class="uc-text" x="550" y="230">发起聊天</text>
+  <ellipse class="uc" cx="550" cy="310" rx="80" ry="22" />
+  <text class="uc-text" x="550" y="310">实时消息收发</text>
+  <ellipse class="uc" cx="550" cy="390" rx="80" ry="22" />
+  <text class="uc-text" x="550" y="390">已读标记</text>
+
+  <!-- 列 3：商家后台（2 个） -->
+  <ellipse class="uc" cx="850" cy="150" rx="80" ry="22" />
+  <text class="uc-text" x="850" y="150">商家后台访问</text>
+  <ellipse class="uc" cx="850" cy="230" rx="80" ry="22" />
+  <text class="uc-text" x="850" y="230">历史记录查询</text>
+
+  <!-- 底部：多端访问（2 个，紧贴买家） -->
+  <ellipse class="uc" cx="265" cy="490" rx="80" ry="22" />
+  <text class="uc-text" x="265" y="490">Web商城访问</text>
+  <ellipse class="uc" cx="495" cy="490" rx="80" ry="22" />
+  <text class="uc-text" x="495" y="490">微信小程序访问</text>
+
+  <!-- ========== 演员 ========== -->
+
+  <!-- 买家（左中） -->
+  <g class="actor">
+    <circle cx="60" cy="315" r="9" />
+    <line x1="60" y1="324" x2="60" y2="363" />
+    <line x1="60" y1="333" x2="38" y2="353" />
+    <line x1="60" y1="333" x2="82" y2="353" />
+    <line x1="60" y1="363" x2="42" y2="393" />
+    <line x1="60" y1="363" x2="78" y2="393" />
+  </g>
+  <text class="actor-text" x="60" y="405">买家</text>
+
+  <!-- 商家（右中） -->
+  <g class="actor">
+    <circle cx="1140" cy="315" r="9" />
+    <line x1="1140" y1="324" x2="1140" y2="363" />
+    <line x1="1140" y1="333" x2="1118" y2="353" />
+    <line x1="1140" y1="333" x2="1162" y2="353" />
+    <line x1="1140" y1="363" x2="1122" y2="393" />
+    <line x1="1140" y1="363" x2="1158" y2="393" />
+  </g>
+  <text class="actor-text" x="1140" y="405">商家</text>
+</svg>

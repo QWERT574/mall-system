@@ -1,0 +1,34 @@
+<!--pages/discount/index.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">优惠活动</text>
+    <text class="subtitle">限时折扣秒杀超值好物</text>
+  </view>
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+  <view wx:elif="{{activities.length===0}}" class="empty">暂无进行中的优惠活动</view>
+  <view wx:else class="activity-list">
+    <view class="act-card" wx:for="{{activities}}" wx:key="id" bindtap="goToActivity" data-id="{{item.id}}">
+      <view class="act-header">
+        <text class="act-badge type-{{item.type}}">{{item.type===1?'满减':item.type===2?'折扣':'秒杀'}}</text>
+        <text class="act-name">{{item.name}}</text>
+        <text class="act-countdown" wx:if="{{item.countdownText}}">{{item.countdownText}}</text>
+      </view>
+      <text class="act-desc" wx:if="{{item.description}}">{{item.description}}</text>
+      <view class="act-rule" wx:if="{{item.type===1&&item.threshold}}">
+        满 <text class="strong">¥{{item.threshold}}</text> 减 <text class="strong">¥{{item.reduceAmount}}</text>
+      </view>
+      <view class="act-rule" wx:if="{{item.type===2&&item.discountRate}}">
+        全场 <text class="strong">{{item.discountRate}}折</text>
+      </view>
+      <view class="act-products" wx:if="{{item.products&&item.products.length>0}}">
+        <view class="ap-item" wx:for="{{item.products}}" wx:for-item="dp" wx:key="productId" catchtap="goToProduct" data-id="{{dp.productId}}">
+          <text class="ap-name">{{dp.productName}}</text>
+          <view class="ap-prices">
+            <text class="ap-orig">¥{{dp.originalPrice}}</text>
+            <text class="ap-disc">¥{{dp.discountPrice}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

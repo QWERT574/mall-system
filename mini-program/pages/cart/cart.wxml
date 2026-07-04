@@ -1,0 +1,107 @@
+<view class="bg-page">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="header-title"><mall-icon name="cart" size="md"/> 我的购物车</text>
+    <text class="cart-count" wx:if="{{cart.length > 0}}">{{cart.length}}</text>
+  </view>
+  
+  <!-- 购物车主体 -->
+  <view class="cart-container fade-in">
+    <!-- 全选栏 -->
+    <view class="cart-header">
+      <view class="select-all" bindtap="toggleSelectAll">
+        <view class="checkbox {{isAllSelected ? 'checked' : ''}}">
+          <text wx:if="{{isAllSelected}}" class="check-icon">✓</text>
+        </view>
+        <text class="select-all-text">全选</text>
+      </view>
+      <text class="selected-total">已选 {{selectedCount}} 件</text>
+    </view>
+    
+    <!-- 购物车为空 -->
+    <view wx:if="{{cart.length === 0}}" class="card empty-cart">
+      <text class="empty-icon"><mall-icon name="cart" size="md"/></text>
+      <text class="empty-text">购物车为空</text>
+      <button bindtap="goToHome" class="btn-secondary go-shopping-btn">去购物</button>
+    </view>
+    
+    <!-- 购物车商品列表 -->
+    <block wx:else>
+      <!-- 收货地址区域 -->
+    <view class="card shipping-address-section">
+      <view class="address-header">
+        <text class="section-title">收货信息</text>
+        <view bindtap="goToAddress" class="edit-address-btn">
+          <text class="edit-text">修改地址</text>
+          <text class="edit-icon">></text>
+        </view>
+      </view>
+      <view class="address-content">
+        <view wx:if="{{defaultAddress}}" class="address-info">
+          <view class="address-top">
+            <text class="consignee">{{defaultAddress.consignee || '未知'}}</text>
+            <text class="phone">{{defaultAddress.phone || '未知'}}</text>
+          </view>
+          <text class="address-detail">
+            {{defaultAddress.province || ''}}{{defaultAddress.city || ''}}{{defaultAddress.district || ''}}{{defaultAddress.detail || ''}}
+          </text>
+        </view>
+        <view wx:else class="no-address" bindtap="goToAddress">
+          <text class="no-address-text">请选择收货地址</text>
+          <text class="no-address-icon">+</text>
+        </view>
+      </view>
+    </view>
+    
+    <!-- 商品列表 -->
+    <view class="cart-items">
+        <view wx:for="{{cart}}" wx:key="id" class="card cart-item">
+          <!-- 选择框 -->
+          <view class="item-select" bindtap="toggleSelectItem" data-index="{{index}}">
+            <view class="checkbox {{item.selected ? 'checked' : ''}}">
+              <text wx:if="{{item.selected}}" class="check-icon">✓</text>
+            </view>
+          </view>
+          
+          <!-- 商品图片 -->
+          <image src="{{item.cover}}" class="item-image"/>
+          
+          <!-- 商品信息 -->
+          <view class="item-info">
+            <text class="item-name">{{item.name}}</text>
+            <text class="item-spec" wx:if="{{item.specName}}">规格: {{item.specName}}</text>
+            <text class="item-price">¥{{item.price}}</text>
+            <text class="item-stock" wx:if="{{item.stock}}">库存: {{item.stock}}件</text>
+            
+            <view class="item-actions">
+              <!-- 数量控制 -->
+              <view class="quantity-control">
+                <button bindtap="decreaseQuantity" data-id="{{item.id}}" class="btn-quantity" disabled="{{item.quantity <= 1}}">-</button>
+                <text class="quantity">{{item.quantity}}</text>
+                <button bindtap="increaseQuantity" data-id="{{item.id}}" class="btn-quantity" disabled="{{item.stock && item.quantity >= item.stock}}">+</button>
+              </view>
+              
+              <!-- 删除按钮 -->
+              <button bindtap="removeItem" data-id="{{item.id}}" class="btn-remove">删除</button>
+            </view>
+            
+            <!-- 小计 -->
+            <text class="item-subtotal">小计: ¥{{item.quantity * item.price}}</text>
+          </view>
+        </view>
+      </view>
+      
+      <!-- 底部结算栏 -->
+      <view class="bottom-checkout-bar">
+        <view class="checkout-info">
+          <text class="total-label">合计:</text>
+          <text class="total-price">¥{{selectedTotal}}</text>
+          <text class="total-hint" wx:if="{{selectedCount === 0}}">请选择商品</text>
+        </view>
+        <button bindtap="checkout" class="checkout-btn" disabled="{{selectedCount === 0}}">
+          结算({{selectedCount}})
+        </button>
+      </view>
+    </block>
+  </view>
+</view>

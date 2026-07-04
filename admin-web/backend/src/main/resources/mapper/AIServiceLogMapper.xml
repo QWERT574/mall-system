@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.AIServiceLogMapper">
+    <!-- 自定义insert方法，直接使用userId，允许插入NULL值 -->
+    <insert id="insert" parameterType="com.example.minimall.model.AIServiceLog">
+        INSERT INTO ai_service_log (user_id, query, response, service_type, created_at)
+        VALUES (#{userId}, #{query}, #{response}, #{serviceType}, #{createdAt})
+    </insert>
+    
+    <!-- 根据用户ID查询AI服务日志 -->
+    <select id="selectByUserId" resultType="com.example.minimall.model.AIServiceLog">
+        SELECT * FROM ai_service_log WHERE user_id = #{userId} ORDER BY created_at DESC
+    </select>
+    
+    <!-- 分页查询AI服务日志 -->
+    <select id="selectPage" resultType="com.example.minimall.model.AIServiceLog">
+        SELECT * FROM ai_service_log 
+        WHERE 1=1
+        <if test="userId != null">
+            AND user_id = #{userId}
+        </if>
+        <if test="serviceType != null">
+            AND service_type = #{serviceType}
+        </if>
+        ORDER BY created_at DESC
+    </select>
+    
+    <!-- 根据用户ID删除AI服务日志 -->
+    <delete id="deleteByUserId">
+        DELETE FROM ai_service_log WHERE user_id = #{userId}
+    </delete>
+    
+    <!-- 根据服务类型删除AI服务日志 -->
+    <delete id="deleteByServiceType">
+        DELETE FROM ai_service_log WHERE service_type = #{serviceType}
+    </delete>
+    
+    <!-- 删除所有AI服务日志 -->
+    <delete id="deleteAll">
+        DELETE FROM ai_service_log
+    </delete>
+</mapper>

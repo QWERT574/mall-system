@@ -1,0 +1,75 @@
+<view class="bg-page">
+  <!-- 页面头部 -->
+  <view class="page-header">
+    <text class="header-title"><mall-icon name="order" size="md"/> 我的订单</text>
+  </view>
+  
+  <!-- 订单状态筛选栏 -->
+  <view class="filter-bar">
+    <view wx:for="{{filterOptions}}" wx:key="index" class="filter-item {{activeFilter === item.value ? 'active' : ''}}" bindtap="filterOrders" data-filter="{{item.value}}">
+      <text class="filter-icon">{{item.icon}}</text>
+      <text class="filter-label">{{item.label}}</text>
+    </view>
+  </view>
+  
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="card loading-container fade-in">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+  
+  <!-- 订单列表 -->
+  <block wx:elif="{{filteredOrders.length > 0}}">
+    <block wx:for="{{filteredOrders}}" wx:key="id">
+      <view class="order-item card fade-in">
+        <view class="order-header">
+          <text class="order-id">订单号: {{item.orderSn || item.id}}</text>
+          <text class="order-status {{item.status === 0 ? 'pending' : item.status === 1 ? 'paid' : item.status === 2 ? 'shipped' : 'completed'}}">
+            {{item.statusText}}
+          </text>
+        </view>
+        <view class="order-content">
+          <block wx:if="{{item.items && item.items.length > 0}}">
+            <block wx:for="{{item.items}}" wx:for-item="orderItem" wx:key="id">
+              <view class="order-product">
+                <text>{{orderItem.productName || '商品名称'}} x {{orderItem.quantity || 1}}</text>
+              </view>
+            </block>
+          </block>
+          <block wx:else>
+            <view class="order-product">
+              <text>商品信息加载中...</text>
+            </view>
+          </block>
+        </view>
+        <view class="order-footer">
+          <text class="order-total">总计: ¥{{item.totalPrice || 0.00}}</text>
+          <text class="order-time">{{item.createTimeText || '时间待定'}}</text>
+        </view>
+        
+        <!-- 按钮放在下方，占满整行 -->
+        <view class="order-actions-container">
+          <view class="order-actions">
+            <button data-id="{{item.id}}" class="btn-detail" catchtap="viewOrder">查看详情</button>
+            <button wx:if="{{item.status === 0}}" data-id="{{item.id}}" class="pay-btn" catchtap="handlePayOrder">立即支付</button>
+            <button wx:if="{{item.status === 0}}" data-id="{{item.id}}" class="cancel-btn" catchtap="cancelOrder">取消订单</button>
+            <button wx:if="{{item.status === 2}}" data-id="{{item.id}}" class="btn-secondary" catchtap="confirmReceipt">确认收货</button>
+            <button wx:if="{{item.status === 3}}" data-id="{{item.id}}" class="btn-review" catchtap="goToReview">去评价</button>
+            <button wx:if="{{item.status >= 2}}" data-id="{{item.id}}" class="btn-aftersale" catchtap="applyAfterSale">申请售后</button>
+            <button data-id="{{item.id}}" class="btn-service" catchtap="goToService">联系客服</button>
+          </view>
+        </view>
+      </view>
+    </block>
+  </block>
+  
+  <!-- 空状态 -->
+  <block wx:else>
+    <view class="empty-state card fade-in">
+      <text class="empty-icon">📋</text>
+      <text class="empty-title">暂无订单</text>
+      <text class="empty-desc">快去挑选心仪的商品吧</text>
+      <view class="empty-action" bindtap="goToHome">去逛逛</view>
+    </view>
+  </block>
+</view>

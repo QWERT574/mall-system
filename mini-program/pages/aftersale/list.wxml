@@ -1,0 +1,37 @@
+<!--pages/aftersale/list.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">售后服务</text>
+    <text class="subtitle">跟踪你的售后申请</text>
+  </view>
+
+  <view class="tabs">
+    <view class="tab {{activeTab==='all'?'active':''}}" bindtap="switchTab" data-tab="all">全部</view>
+    <view class="tab {{activeTab==='0'?'active':''}}" bindtap="switchTab" data-tab="0">待处理</view>
+    <view class="tab {{activeTab==='1'?'active':''}}" bindtap="switchTab" data-tab="1">处理中</view>
+    <view class="tab {{activeTab==='2'?'active':''}}" bindtap="switchTab" data-tab="2">已解决</view>
+    <view class="tab {{activeTab==='3'?'active':''}}" bindtap="switchTab" data-tab="3">已关闭</view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+  <view wx:elif="{{list.length===0}}" class="empty">
+    <text class="empty-icon">📋</text>
+    <text>暂无售后记录</text>
+  </view>
+  <view wx:else class="list">
+    <view class="item" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <view class="item-top">
+        <text class="item-id">售后编号 #{{item.id}}</text>
+        <text class="item-status status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="item-body">
+        <text class="item-type">{{item.serviceTypeText}}</text>
+        <text class="item-reason">{{item.reason}}</text>
+      </view>
+      <view class="item-footer">
+        <text class="item-time">{{item.createdAtText}}</text>
+        <text class="item-arrow">查看详情 →</text>
+      </view>
+    </view>
+  </view>
+</view>

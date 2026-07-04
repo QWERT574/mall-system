@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.LogisticsTraceMapper">
+    <select id="selectByLogisticsId" resultType="com.example.minimall.model.LogisticsTrace">
+        SELECT * FROM logistics_trace WHERE logistics_id = #{logisticsId} ORDER BY update_time DESC
+    </select>
+    
+    <delete id="deleteByLogisticsId">
+        DELETE FROM logistics_trace WHERE logistics_id = #{logisticsId}
+    </delete>
+</mapper>

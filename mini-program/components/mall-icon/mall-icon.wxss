@@ -1,0 +1,16 @@
+.ml-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.ml-icon-text {
+  font-size: 44rpx;
+  line-height: 1;
+}
+
+.ml-icon--sm .ml-icon-text { font-size: 32rpx; }
+.ml-icon--md .ml-icon-text { font-size: 44rpx; }
+.ml-icon--lg .ml-icon-text { font-size: 56rpx; }

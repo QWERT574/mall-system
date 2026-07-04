@@ -1,0 +1,94 @@
+<!--pages/aftersale/detail.wxml-->
+<view class="container">
+  <view wx:if="{{loading}}" class="loading">加载中...</view>
+  <view wx:elif="{{!detail}}" class="empty">售后申请不存在</view>
+  <block wx:else>
+    <view class="status-banner status-{{detail.status}}">
+      <text class="status-icon">{{detail.status===0?'⏳':detail.status===1?'🔄':detail.status===2?'✅':'✖️'}}</text>
+      <text class="status-title">{{['待处理','处理中','已解决','已关闭'][detail.status]||'未知'}}</text>
+      <text class="status-desc">{{detail.status===0?'等待商家处理':detail.status===1?'商家正在处理中':detail.status===2?'售后已完结':'申请已关闭'}}</text>
+    </view>
+
+    <view class="section">
+      <text class="section-title">售后信息</text>
+      <view class="info-grid">
+        <view class="info-item">
+          <text class="info-label">售后编号</text>
+          <text>#{{detail.id}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">服务类型</text>
+          <text>{{['','退货退款','换货','维修'][detail.serviceType]||'其他'}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">申请时间</text>
+          <text>{{detail.createdAtText}}</text>
+        </view>
+        <view class="info-item" wx:if="{{detail.refundAmount}}">
+          <text class="info-label">退款金额</text>
+          <text class="price">¥{{detail.refundAmount}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">售后原因</text>
+      <view class="reason-box">{{detail.reason}}</view>
+    </view>
+
+    <view class="section" wx:if="{{detail.serviceResult}}">
+      <text class="section-title">处理结果</text>
+      <view class="result-box">{{detail.serviceResult}}</view>
+    </view>
+
+    <view class="section" wx:if="{{records.length>0}}">
+      <text class="section-title">处理进度</text>
+      <view class="record-item" wx:for="{{records}}" wx:key="id">
+        <view class="record-dot"></view>
+        <view class="record-content">
+          <text class="record-text">{{item.operationContent}}</text>
+          <text class="record-time">{{item.createdAtText}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-section" wx:if="{{detail.status===0 || detail.status===1}}">
+      <button class="action-btn cancel-btn" wx:if="{{detail.status===0}}" bindtap="cancelAftersale">撤销申请</button>
+      <button class="action-btn evidence-btn" wx:if="{{detail.status===0 || detail.status===1}}" bindtap="showAddEvidence">补充证据</button>
+      <button class="action-btn logistics-btn" wx:if="{{detail.status===1 && !detail.logisticsNo}}" bindtap="showAddLogistics">填写退货物流</button>
+      <button class="action-btn contact-btn" bindtap="contactService">联系客服</button>
+    </view>
+
+    <!-- 补充证据弹窗 -->
+    <view class="modal-mask" wx:if="{{showEvidenceModal}}" bindtap="hideEvidenceModal">
+      <view class="modal-content" catchtap="">
+        <text class="modal-title">补充证据</text>
+        <textarea class="modal-textarea" placeholder="请输入补充说明..." value="{{evidenceText}}" bindinput="onEvidenceInput" maxlength="500" />
+        <view class="modal-actions">
+          <button class="modal-btn cancel" bindtap="hideEvidenceModal">取消</button>
+          <button class="modal-btn confirm" bindtap="submitEvidence">提交</button>
+        </view>
+      </view>
+    </view>
+
+    <!-- 填写退货物流弹窗 -->
+    <view class="modal-mask" wx:if="{{showLogisticsModal}}" bindtap="hideLogisticsModal">
+      <view class="modal-content" catchtap="">
+        <text class="modal-title">填写退货物流</text>
+        <view class="form-field">
+          <text class="form-label">物流公司</text>
+          <input class="form-input" placeholder="如：顺丰速运" value="{{logisticsCompany}}" bindinput="onLogisticsCompanyInput" />
+        </view>
+        <view class="form-field">
+          <text class="form-label">物流单号</text>
+          <input class="form-input" placeholder="请输入物流单号" value="{{logisticsNo}}" bindinput="onLogisticsNoInput" />
+        </view>
+        <view class="modal-actions">
+          <button class="modal-btn cancel" bindtap="hideLogisticsModal">取消</button>
+          <button class="modal-btn confirm" bindtap="submitLogistics">提交</button>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>
