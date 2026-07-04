@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  dev:
+    image: mcr.microsoft.com/devcontainers/base:ubuntu-22.04
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    depends_on:
+      - mysql
+      - redis
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: minimall
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 首次启动自动执行建库脚本（建表+初始数据）
+      - ../admin-web/backend/src/main/resources/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "3306:3306"
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql-data:
