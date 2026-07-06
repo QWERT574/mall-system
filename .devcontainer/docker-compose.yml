@@ -19,7 +19,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       # 首次启动自动执行建库脚本（建表+初始数据）
-      - ../admin-web/backend/src/main/resources/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../backend/src/main/resources/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     ports:
       - "3306:3306"
 

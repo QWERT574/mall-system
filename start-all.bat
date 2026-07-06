@@ -12,19 +12,19 @@ where node >nul 2>&1 || (echo   [!] Node.js not found & goto :fail)
 where java >nul 2>&1 || (echo   [!] Java not found & goto :fail)
 
 echo   [1] Backend      :8081
-start /b cmd /c "cd backend && mvn spring-boot:run >> ../logs/backend.log 2>&1"
+start /b cmd /c "cd backend && mvn spring-boot:run >> ..\logs\backend.log 2>&1"
 ping -n 31 127.0.0.1 >nul
 
 echo   [2] Admin Web    :3001
-start /b cmd /c "cd admin-web && npm run dev >> ../logs/admin-web.log 2>&1"
+start /b cmd /c "cd admin-web && npm run dev >> ..\logs\admin-web.log 2>&1"
 ping -n 6 127.0.0.1 >nul
 
 echo   [3] Seller Web   :5173
-start /b cmd /c "cd seller-web && npm run dev >> ../logs/seller-web.log 2>&1"
+start /b cmd /c "cd seller-web && npm run dev >> ..\logs\seller-web.log 2>&1"
 ping -n 6 127.0.0.1 >nul
 
 echo   [4] Web Mall     :5176
-start /b cmd /c "cd web-mall && npm run dev >> ../logs/web-mall.log 2>&1"
+start /b cmd /c "cd web-mall && npm run dev >> ..\logs\web-mall.log 2>&1"
 
 echo   All services started! Opening browsers...
 echo.
