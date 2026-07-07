@@ -127,6 +127,12 @@ public class PermissionInterceptor implements HandlerInterceptor {
         "^/api/coupon/(claim|receive)/\\d+(/.*)?$"
     );
 
+    // 商家优惠券管理接口：POST /api/coupon、PUT/DELETE /api/coupon/{id}
+    // （公开读取 /api/coupon/list、/api/coupon/available、/api/coupon/{id} 已由 PUBLIC_PATHS / PUBLIC_ID_PATTERN 放行）
+    private static final Pattern SELLER_COUPON_PATTERN = Pattern.compile(
+        "^/api/coupon(/\\d+)?$"
+    );
+
     public PermissionInterceptor(JwtUtil jwtUtil, UserService userService) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -228,6 +234,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
             // 商家端客服聊天所有子接口
             || uri.startsWith("/api/chat/")
             || uri.startsWith("/api/coupon/seller/")
+            // 商家对自己的优惠券做 CRUD：POST /api/coupon、PUT/DELETE /api/coupon/{id}
+            || SELLER_COUPON_PATTERN.matcher(uri).matches()
             || uri.startsWith("/api/discount/seller/")
             // 商家对自己的优惠活动做 CRUD：POST/PUT/DELETE /api/discount、
             // /api/discount/{id}、/api/discount/{id}/product、/api/discount/product/{id}
