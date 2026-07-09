@@ -9,7 +9,6 @@ import com.example.minimall.service.IntentClassifierService;
 import com.example.minimall.service.RagMonitorService;
 import com.example.minimall.service.SeedFAQInitializer;
 import com.example.minimall.service.VectorStoreService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -24,22 +23,33 @@ import java.util.Map;
 public class AIController {
     /** AI 业务服务 */
     private final AIService aiService;
+    /** RAG 监控服务（问题5：可观测性） */
+    private final RagMonitorService ragMonitorService;
+    /** 意图识别服务（问题7：动态路由） */
+    private final IntentClassifierService intentClassifierService;
+    /** 敏感信息过滤服务（问题3：内容安全） */
+    private final ContentFilterService contentFilterService;
+    /** 种子FAQ初始化器（问题4：冷启动） */
+    private final SeedFAQInitializer seedFAQInitializer;
+    /** 向量存储服务（问题1：HNSW 索引） */
+    private final VectorStoreService vectorStoreService;
+    /** Embedding 向量化服务（问题2：语义质量） */
+    private final EmbeddingService embeddingService;
 
-    @Autowired
-    private RagMonitorService ragMonitorService;
-    @Autowired
-    private IntentClassifierService intentClassifierService;
-    @Autowired
-    private ContentFilterService contentFilterService;
-    @Autowired
-    private SeedFAQInitializer seedFAQInitializer;
-    @Autowired
-    private VectorStoreService vectorStoreService;
-    @Autowired
-    private EmbeddingService embeddingService;
-
-    public AIController(AIService aiService) {
+    public AIController(AIService aiService,
+                        RagMonitorService ragMonitorService,
+                        IntentClassifierService intentClassifierService,
+                        ContentFilterService contentFilterService,
+                        SeedFAQInitializer seedFAQInitializer,
+                        VectorStoreService vectorStoreService,
+                        EmbeddingService embeddingService) {
         this.aiService = aiService;
+        this.ragMonitorService = ragMonitorService;
+        this.intentClassifierService = intentClassifierService;
+        this.contentFilterService = contentFilterService;
+        this.seedFAQInitializer = seedFAQInitializer;
+        this.vectorStoreService = vectorStoreService;
+        this.embeddingService = embeddingService;
     }
 
     /** AI 助手问答接口：处理用户问题并返回结果与关联商品卡片 */

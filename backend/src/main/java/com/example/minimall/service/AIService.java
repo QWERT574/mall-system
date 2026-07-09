@@ -52,33 +52,39 @@ public class AIService {
     private final DiscountActivityService discountActivityService;
     /** HTTP 客户端 */
     private final RestTemplate restTemplate;
-
-    /** RAG 检索增强生成服务（通过 @Autowired 注入，避免修改构造函数） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private RagService ragService;
+    /** RAG 检索增强生成服务 */
+    private final RagService ragService;
     /** 多轮对话管理服务 */
-    @org.springframework.beans.factory.annotation.Autowired
-    private ConversationService conversationService;
+    private final ConversationService conversationService;
     /** 意图识别服务（问题7：动态路由） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private IntentClassifierService intentClassifierService;
+    private final IntentClassifierService intentClassifierService;
     /** 敏感信息过滤服务（问题3：内容安全） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private ContentFilterService contentFilterService;
+    private final ContentFilterService contentFilterService;
     /** 商品上下文优化器（问题6：上下文控制） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private ProductContextOptimizer productContextOptimizer;
+    private final ProductContextOptimizer productContextOptimizer;
     /** RAG 监控服务（问题5：可观测性） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private RagMonitorService ragMonitorService;
+    private final RagMonitorService ragMonitorService;
     /** 种子FAQ初始化器（问题4：冷启动） */
-    @org.springframework.beans.factory.annotation.Autowired
-    private SeedFAQInitializer seedFAQInitializer;
+    private final SeedFAQInitializer seedFAQInitializer;
 
     private final Map<String, String> queryCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
-    public AIService(AIServiceLogMapper aiServiceLogMapper, DeepSeekConfig deepSeekConfig, ProductService productService, CategoryService categoryService, OrderService orderService, LogisticsService logisticsService, AfterSaleServiceApi afterSaleServiceApi, DiscountActivityService discountActivityService) {
+    public AIService(AIServiceLogMapper aiServiceLogMapper,
+                     DeepSeekConfig deepSeekConfig,
+                     ProductService productService,
+                     CategoryService categoryService,
+                     OrderService orderService,
+                     LogisticsService logisticsService,
+                     AfterSaleServiceApi afterSaleServiceApi,
+                     DiscountActivityService discountActivityService,
+                     RagService ragService,
+                     ConversationService conversationService,
+                     IntentClassifierService intentClassifierService,
+                     ContentFilterService contentFilterService,
+                     ProductContextOptimizer productContextOptimizer,
+                     RagMonitorService ragMonitorService,
+                     SeedFAQInitializer seedFAQInitializer) {
         this.aiServiceLogMapper = aiServiceLogMapper;
         this.deepSeekConfig = deepSeekConfig;
         this.productService = productService;
@@ -87,6 +93,13 @@ public class AIService {
         this.logisticsService = logisticsService;
         this.afterSaleServiceApi = afterSaleServiceApi;
         this.discountActivityService = discountActivityService;
+        this.ragService = ragService;
+        this.conversationService = conversationService;
+        this.intentClassifierService = intentClassifierService;
+        this.contentFilterService = contentFilterService;
+        this.productContextOptimizer = productContextOptimizer;
+        this.ragMonitorService = ragMonitorService;
+        this.seedFAQInitializer = seedFAQInitializer;
         this.restTemplate = createRestTemplate();
     }
 

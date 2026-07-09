@@ -1,63 +1,176 @@
-﻿# 🛒 乡村振兴 - 乡村振兴农产品电商平台
+# 🛒 乡村振兴 - 农产品电商平台
 
 <p align="center">
-  <strong>一个功能完善的现代化多端电商平台系统</strong>
+  <strong>一个面向乡村振兴的现代化多端 B2C 电商平台</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Spring_Boot-2.7.9-green" alt="Spring Boot">
-  <img src="https://img.shields.io/badge/Vue.js-3.x-blue" alt="Vue.js">
-  <img src="https://img.shields.io/badge/MySQL-8.0-orange" alt="MySQL">
-  <img src="https://img.shields.io/badge/Redis-7.x-red" alt="Redis">
-  <img src="https://img.shields.io/badge/微信小程序-原生开发-09B83E" alt="WeChat Mini Program">
+  <img src="https://img.shields.io/badge/Spring_Boot-2.7.9-6DB33F" alt="Spring Boot">
+  <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js">
+  <img src="https://img.shields.io/badge/MyBatis--Plus-3.5.3-1693E6" alt="MyBatis-Plus">
+  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1" alt="MySQL">
+  <img src="https://img.shields.io/badge/Redis-7.x-DC382D" alt="Redis">
+  <img src="https://img.shields.io/badge/微信小程序-原生-09B83E" alt="WeChat Mini Program">
+  <img src="https://img.shields.io/badge/DeepSeek-AI-009688" alt="DeepSeek">
 </p>
 
 ---
 
 ## 📋 项目概述
 
-**乡村振兴** 是一个面向乡村振兴的综合性农产品电商平台，采用前后端分离架构，支持多端访问（Web端、商家端、管理后台、微信小程序）。系统整合了商品管理、订单处理、在线支付、智能客服、售后服务等核心电商功能，并融入了 AI 智能推荐和实时聊天等创新特性。
+**乡村振兴** 是一个面向乡村振兴场景的农产品电商平台，采用**前后端分离 + 多端协同**架构，覆盖买家、商家、管理员、客服四类角色。系统包含完整的电商核心（商品/订单/支付/售后/营销），并融合 **RAG 知识库**、**AI 智能客服**、**STOMP 实时聊天**、**可观测性**等进阶能力。
 
 ### ✨ 核心特性
 
-- **🎯 多端支持**：用户 Web 端、商家管理端、后台管理系统、微信小程序四端互通
-- **🤖 AI 智能服务**：集成 DeepSeek AI 提供智能客服和商品推荐
-- **💬 实时通讯**：基于 WebSocket + STOMP 协议的即时聊天系统
-- **🔐 安全可靠**：JWT 认证 + Spring Security 权限控制
-- **⚡ 高性能**：Redis 缓存 + 连接池优化 + 图片压缩处理
-- **📱 移动优先**：响应式设计 + 微信小程序原生体验
+- 🎯 **多端一体**：Web 商城 (Vue3) + 商家管理端 (Vue3) + 管理后台 (Vue3+TS) + 微信小程序 (原生) + 共享 UI 库
+- 🤖 **AI 智能服务**：DeepSeek-v4-flash + RAG 检索增强 + Embedding 向量语义召回 + 意图分类
+- 💬 **实时通讯**：WebSocket + STOMP + SockJS，支持买家 ↔ 商家 ↔ 客服三方会话
+- 🔐 **完整鉴权**：JWT + Spring Security + 自研 `PermissionInterceptor` 角色白名单
+- ⚡ **高性能**：Redis 缓存 + HikariCP 连接池 + Thumbnailator 图片压缩 + MyBatis-Plus 分页
+- 📊 **可观测性**：Actuator + Micrometer Prometheus 指标 + TraceId 链路追踪 + 结构化日志
+- 🛡️ **安全防护**：BCrypt 密码哈希 + XSS 过滤 + 图形验证码 + 短信验证码 + 接口限流 (`@RateLimit`)
+
+---
+
+## 🛡️ 安全与密钥管理
+
+> **本项目所有敏感信息（数据库密码、Redis 密码、AI Key、JWT 密钥、admin 默认密码）必须通过环境变量注入，绝不能硬编码到代码、配置或文档中。**
+
+### 必须遵守的规则
+
+1. **本地开发**：复制 `backend/.env.example` → `backend/.env`，填入你自己的密钥
+2. **Git 提交**：`.env` 必须加入 `.gitignore`（已默认配置），只提交 `.env.example`
+3. **生产部署**：使用 Docker secrets / K8s Secret / 云平台密钥管理服务
+4. **密钥轮换**：JWT 密钥、admin 密码每 90 天轮换一次
+
+### 占位符规范
+
+README 中所有 `<YOUR_*>` 形式的占位符都表示**你必须替换的密钥**，例如：
+
+| 占位符 | 含义 | 获取方式 |
+|---|---|---|
+| `<YOUR_DB_PASSWORD>` | MySQL root 密码 | 自己设定（≥ 16 位，含大小写+数字+符号） |
+| `<YOUR_REDIS_PASSWORD_OR_EMPTY>` | Redis 密码 | `redis-cli config set requirepass <pwd>` |
+| `<YOUR_DEEPSEEK_API_KEY>` | DeepSeek 平台 Key | https://platform.deepseek.com |
+| `<YOUR_EMBEDDING_API_KEY>` | OpenAI 兼容的 Embedding Key | https://platform.openai.com |
+| `<YOUR_256BIT_RANDOM_SECRET>` | JWT 签名密钥 | `openssl rand -base64 64` |
+| `<INITIAL_PASSWORD>` | admin 初始密码 | `.env.example` 中查找或 `start-all.bat` 启动日志 |
+| `<BCRYPT_HASH_OF_NEW_PASSWORD>` | BCrypt 密码哈希 | https://bcrypt-generator.com 生成 |
+
+### 提交前自检
+
+```bash
+# 检查代码中是否误提交了密钥
+git secrets --scan
+# 或
+grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*.yml" --include="*.md" .
+```
 
 ---
 
 ## 🏗️ 系统架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        客户端层                              │
-├─────────────┬─────────────┬──────────────┬─────────────────┤
-│   web-mall  │  seller-web │   admin-web  │  mini-program   │
-│  (用户商城)  │  (商家管理)  │ (后台管理)    │  (微信小程序)     │
-│  Vue3+Vite  │ Vue3+Vite   │ Vue3+ViteTS  │   原生小程序      │
-└──────┬──────┴──────┬──────┴──────┬───────┴────────┬────────┘
-       │             │             │                │
-       └─────────────┴──────┬──────┴────────────────┘
-                           │ HTTP/WebSocket
-                    ┌──────▼──────┐
-                    │   Nginx     │
-                    │  (反向代理)   │
-                    └──────┬──────┘
-                           │
-              ┌────────────▼────────────┐
-              │      Backend 后端服务     │
-              │   Spring Boot 2.7.9     │
-              │   Port: 8081            │
-              └──────┬────────┬─────────┘
-                     │        │
-            ┌────────▼┐  ┌────▼─────┐
-            │  MySQL  │  │  Redis   │
-            │  8.0.33 │  │  缓存服务  │
-            └─────────┘  └──────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                          客户端层 (5 个端)                          │
+├──────────────┬──────────────┬──────────────┬───────────┬───────────┤
+│   web-mall   │  seller-web  │   admin-web  │ mini-prog │shared-ui  │
+│  用户商城     │  商家管理     │  后台管理     │ 微信小程序 │共享组件   │
+│   Vue 3      │   Vue 3      │ Vue3 + TS    │ 原生 WXML │ Vue 组件  │
+│   :5176      │    :5173     │   :3001      │  微信 IDE  │   复用    │
+└──────┬───────┴──────┬───────┴──────┬───────┴─────┬─────┴─────┬─────┘
+       │ HTTP/WS      │ HTTP/WS      │ HTTP/WS     │ HTTPS     │
+       └──────────────┴──────┬───────┴─────────────┴───────────┘
+                             │
+                       Vite Proxy (/api, /uploads, /images, /ws-chat)
+                             │
+                    ┌────────▼────────┐
+                    │   Spring Boot   │  ← :8081
+                    │  Backend 后端   │
+                    │  28 Controllers │
+                    │  42 Services    │
+                    └─┬────────────┬──┘
+                      │            │
+            ┌─────────▼─┐    ┌─────▼──────┐
+            │   MySQL   │    │   Redis    │
+            │  8.0.x    │    │   7.x      │
+            │ minimall  │    │  Lettuce   │
+            └───────────┘    └────────────┘
+                    │
+            ┌───────▼─────────┐
+            │ Spring Boot    │
+            │ Actuator +     │  ← /actuator/health, /actuator/prometheus
+            │ Prometheus     │
+            └────────────────┘
 ```
+
+> **端口速查**：
+> | 服务 | 端口 | 启动入口 |
+> |---|---|---|
+> | Backend | 8081 | `backend/` |
+> | Admin Web | 3001 | `admin-web/` |
+> | Seller Web | 5173 | `seller-web/` |
+> | Web Mall | 5176 | `web-mall/` |
+> | MySQL | 3306 | docker / 本地 |
+> | Redis | 6379 | docker / 本地 |
+
+---
+
+## 🧰 技术栈
+
+### 后端
+
+| 技术 | 版本 | 用途 |
+|---|---|---|
+| Java | 8 | 编程语言 |
+| Spring Boot | 2.7.9 | 应用框架 |
+| Spring Security | 5.7.x | 安全框架 |
+| MyBatis-Plus | 3.5.3.1 | ORM（不用 JPA） |
+| MySQL | 8.0.33 | 关系型数据库 |
+| Redis (Lettuce) | 7.x | 缓存 / 验证码 / 分布式 session |
+| HikariCP | 4.x | JDBC 连接池（最大 50 线程） |
+| JWT (jjwt) | 0.11.5 | Token 认证 |
+| Springfox Swagger | 3.0.0 | API 文档 |
+| WebSocket + STOMP | - | 实时通信 |
+| DeepSeek API | v4-flash | AI 大模型 |
+| Embedding API | text-embedding-3-small (1536 维) | RAG 向量化 |
+| Thumbnailator | 0.4.19 | 图片压缩 |
+| Apache HttpClient | 4.5.13 | HTTP 客户端 / 连接池 |
+| Spring Boot Actuator + Micrometer Prometheus | - | 可观测性 |
+| dotenv-java | 3.0.0 | 读 `.env` |
+| Lombok | 1.18.30 | 代码简化 |
+
+### 前端（三个独立工程）
+
+| 项目 | Vue | Vite | TS | Pinia | Element Plus | Vite Plugins |
+|---|---|---|---|---|---|---|
+| `admin-web` | 3.3.4 | 5.0.8 | ✅ | 2.1.7 | 2.4.4 | unplugin-auto-import, sass-embedded |
+| `seller-web` | 3.2.0 | 4.0.0 | ❌ | 3.0.4 | 2.4.4 | unplugin-auto-import |
+| `web-mall` | 3.2.0 | 4.0.0 | ❌ | 3.0.4 | 2.4.4 | — |
+| `shared-ui` | 3.x | 库 | — | — | — | 跨工程复用组件 |
+
+> 三个前端都使用 **Element Plus 2.4.4** + **@stomp/stompjs 7.3.0** + **SockJS 1.6.1** + **Axios 1.x** + **vue-router 4.x**。
+> 共同点：都通过 Vite proxy 把 `/api` `/uploads` `/images` 代理到 `http://localhost:8081`。
+
+### 小程序
+
+| 技术 | 说明 |
+|---|---|
+| 微信小程序原生框架 | 无第三方 UI 库 |
+| 自定义组件 `components/mall-icon` | 图标组件 |
+| TabBar 5 个 | 首页 / 分类 / 购物车 / 优惠 / 我的 |
+
+### 工具 / 中间件
+
+| 工具 | 用途 |
+|---|---|
+| Maven 3.8+ | 后端构建 |
+| Node 16+（推荐 18 LTS） | 前端构建 |
+| Git | 版本控制 |
+| Docker + docker-compose | 容器化部署 |
+| MySQL Workbench / Navicat | 数据库 GUI |
+| RedisInsight | Redis GUI |
+| VSCode / WebStorm / IntelliJ IDEA | IDE |
 
 ---
 
@@ -65,170 +178,181 @@
 
 ### 1️⃣ backend - 后端服务 [Java/Spring Boot]
 
-**技术栈：**
-- **框架**：Spring Boot 2.7.9 + Spring Security + Spring Data JPA
-- **ORM**：MyBatis-Plus 3.5.3.1（增强版 MyBatis）
-- **数据库**：MySQL 8.0.33 + HikariCP 连接池
-- **缓存**：Redis（Lettuce 客户端）+ Spring Cache
-- **认证**：JWT (jjwt 0.11.5) + Spring Security
-- **API 文档**：Swagger 3.0 (SpringFox)
-- **实时通信**：WebSocket + STOMP 协议 + SockJS
-- **AI 集成**：DeepSeek API (智能客服)
-- **工具库**：Lombok, Thumbnailator (图片压缩), Apache HttpClient
-
-**核心功能模块：**
-- 👤 用户认证与权限管理（RBAC 角色权限）
-- 📦 商品管理（分类、规格、标签、图片）
-- 🛒 购物车与订单系统
-- 💳 支付集成与退款处理
-- 🎫 优惠券与促销活动
-- 💬 在线客服聊天系统（AI + 人工）
-- 🔧 售后服务与工单管理
-- 📊 数据统计与分析
-- ⚙️ 系统配置与管理
-
-**项目结构：**
+**目录结构：**
 ```
 backend/
 ├── src/main/java/com/example/minimall/
-│   ├── annotation/          # 自定义注解（限流等）
-│   ├── common/              # 公共类（统一返回结果）
-│   ├── config/              # 配置类（安全、上传、AI、Redis）
-│   ├── context/             # 应用上下文
-│   ├── dto/                 # 数据传输对象
-│   ├── enums/               # 枚举定义
-│   ├── filter/              # 过滤器（XSS防护）
-│   ├── mapper/              # MyBatis Mapper 接口
-│   ├── model/               # 数据库实体类
-│   ├── security/            # 安全工具类
-│   ├── service/             # 业务逻辑层
-│   ├── utils/               # 工具类（JWT等）
-│   └── vo/                  # 视图对象
+│   ├── MinimaMallApplication.java   # Spring Boot 启动类
+│   ├── annotation/                 # @RateLimit 自定义注解
+│   ├── common/                     # 统一返回 Result<T>
+│   ├── config/                     # 14 个配置类（Security/WebSocket/Redis/MyBatisPlus/AI/RAG/...）
+│   ├── constants/                  # RedisKeys / ResponseCode
+│   ├── context/                    # AppContext（请求上下文）
+│   ├── controller/                 # 29 个 REST 控制器（含 BaseController）
+│   ├── dto/                        # 数据传输对象
+│   ├── enums/                      # 枚举（订单/售后/优惠券/用户类型/...）
+│   ├── exception/                  # BusinessException + GlobalExceptionHandler
+│   ├── filter/                     # XssFilter
+│   ├── initializer/                # DataInitializer（启动初始化）
+│   ├── interceptor/                # 4 个拦截器（鉴权/限流/日志/性能）
+│   ├── mapper/                     # 43 个 MyBatis-Plus Mapper 接口
+│   ├── model/                      # 43 个实体（与 DB 表 1:1）
+│   ├── security/                   # XSS 工具
+│   ├── service/                    # 42 个业务接口
+│   │   ├── impl/                   # 实现类
+│   │   ├── AIService.java          # DeepSeek 调用 + RAG 编排
+│   │   ├── RagService.java         # 检索增强
+│   │   ├── HnswIndex.java          # HNSW 向量索引（O(log n) 检索）
+│   │   ├── EmbeddingService.java   # 向量化（外部 API + 本地 TF-IDF 降级）
+│   │   ├── KnowledgeBaseService.java
+│   │   ├── IntentClassifierService.java
+│   │   ├── RagMonitorService.java
+│   │   ├── ProductContextOptimizer.java
+│   │   ├── ContentFilterService.java
+│   │   ├── SensitiveWordFilter.java
+│   │   └── ...
+│   ├── utils/                      # JwtUtil, PasswordValidator, LogisticsApiClient
+│   ├── vo/                         # 9 个视图对象
+│   └── websocket/                  # 5 个 WS 处理器（Chat/AdminChat/STOMP/Event/...）
 ├── src/main/resources/
-│   ├── mapper/              # MyBatis XML 映射文件
-│   ├── sql/                 # 数据库脚本（初始化、测试数据）
-│   ├── static/images/       # 静态资源图片
-│   └── application.yml      # 主配置文件
-└── pom.xml                  # Maven 配置
+│   ├── mapper/                     # MyBatis XML (22 个)
+│   ├── sql/                        # SQL 脚本
+│   │   ├── schema.sql              # 建表
+│   │   ├── data.sql                # 测试数据
+│   │   ├── init_database.sql       # 完整初始化（建表+数据，36 张表）
+│   │   └── migrate_*.sql           # 4 个迁移脚本
+│   ├── static/images/              # 静态资源
+│   ├── application.yml             # 主配置（环境变量驱动）
+│   └── logback-spring.xml          # 日志配置
+├── src/test/                       # 单元 + 集成测试（JUnit 5 + Mockito + H2）
+├── pom.xml                         # Maven
+├── Dockerfile                      # Docker 镜像构建
+├── api_test.ps1                    # PowerShell API 烟测脚本
+└── .env.example                    # 环境变量模板
 ```
 
-**运行端口**：`8081`
+**核心功能模块：**
+- 👤 用户认证（3 种登录：账号密码 / 短信验证码 / 微信小程序）
+- 🛡️ RBAC 权限（`PermissionInterceptor` + `PermissionService` + `Role` + `RolePermission`）
+- 📦 商品管理（分类 / 规格 / 标签 / 多图）
+- 🛒 购物车 + 订单（事务 + 悲观锁防超卖）
+- 💳 支付（演示版 Mock 支付，2 秒回调）
+- 🎫 优惠券 + 满减活动
+- 💬 客服聊天（买家 ↔ 商家 ↔ 客服三方 + STOMP）
+- 🤖 AI 客服（RAG 检索 + DeepSeek 生成 + 流式 SSE）
+- 📚 知识库管理（文档分块 + Embedding 索引 + FAQ 匹配）
+- 🔧 售后服务（退款 / 退货 / 进度跟踪）
+- 📊 数据统计 + 仪表盘
+- 🛡️ 可观测性（Actuator + Prometheus + TraceId）
+
+**端口**：`8081`（可通过 `SERVER_PORT` 环境变量覆盖）
 
 ---
 
 ### 2️⃣ admin-web - 管理后台 [Vue 3 + TypeScript]
 
-**技术栈：**
-- **前端框架**：Vue 3.3.4 + TypeScript 5.3.3
-- **构建工具**：Vite 5.0.8
-- **UI 组件库**：Element Plus 2.4.4
-- **状态管理**：Pinia 2.1.7
-- **路由**：Vue Router 4.2.5
-- **HTTP 客户端**：Axios 1.6.2
-- **图表库**：ECharts 5.4.3
-- **实时通信**：STOMP.js 7.3.0 + SockJS
-- **日期处理**：Day.js 1.11.10
-- **CSS 预处理器**：Sass
+**技术栈**：Vue 3.3.4 + Vite 5.0.8 + TypeScript 5.3.3 + Element Plus 2.4.4 + Pinia 2.1.7
 
-**主要功能页面：**
-| 路由路径 | 功能模块 | 说明 |
-|---------|---------|------|
-| `/login` | 登录页 | 管理员身份验证 |
-| `/dashboard` | 仪表盘 | 数据概览与统计图表 |
-| `/product` | 商品管理 | 商品 CRUD、上下架 |
-| `/order` | 订单管理 | 订单查询、状态管理 |
-| `/user` | 用户管理 | 用户信息、角色分配 |
-| `/activity` | 活动管理 | 促销活动配置 |
+**路由表（13 个页面）**：
+
+| 路径 | 名称 | 功能 |
+|---|---|---|
+| `/login` | 登录 | 管理员 / 商家账号登录 |
+| `/dashboard` | 仪表盘 | 销售统计 + 图表 + 待办 |
+| `/product` | 商品管理 | 商品 CRUD、上下架、规格 |
+| `/order` | 订单管理 | 全平台订单、状态机、发货 |
+| `/user` | 用户管理 | 买家/商家账号管理 |
+| `/activity` | 活动管理 | 满减 / 折扣活动 |
 | `/aftersale` | 售后管理 | 售后工单处理 |
-| `/system` | 系统设置 | 参数配置 |
+| `/system` | 系统设置 | 系统参数配置 |
 | `/seller` | 商家审核 | 商家入驻审核 |
-| `/customer-service` | 客服聊天 | 在线客服对话界面 |
-| `/intervention` | 人工介入 | 复杂问题处理 |
-| `/agent-management` | 客服管理 | 客服人员管理 |
+| `/customer-service` | 客服聊天 | 客服视角实时聊天 |
+| `/intervention` | 人工介入 | AI 答不了的复杂问题 |
+| `/agent-management` | 客服管理 | 客服账号管理 |
+| `/knowledge` | 知识库管理 | RAG 文档 / FAQ 维护 |
 
-**项目特色：**
-- ✅ 完整的后台管理系统
-- ✅ 实时客服聊天功能（支持会话转接、FAQ面板、评分）
-- ✅ 数据可视化仪表盘
-- ✅ 自动导入组件和 API（unplugin）
+**端口**：`3001`
 
-**开发端口**：`3001` → 代理到 `8081`
+**特色**：
+- 全 TS 类型安全
+- 自动导入 Vue/Pinia/Router/Element Plus
+- STOMP 实时聊天（管理端 + 客户端）
 
 ---
 
 ### 3️⃣ seller-web - 商家管理端 [Vue 3]
 
-**技术栈：**
-- **前端框架**：Vue 3.2.0
-- **构建工具**：Vite 4.0.0
-- **UI 组件库**：Element Plus 2.4.4
-- **状态管理**：Pinia 3.0.4
-- **其他依赖**：ECharts, Axios, STOMP.js
+**技术栈**：Vue 3.2.0 + Vite 4.0.0 + Element Plus 2.4.4 + Pinia 3.0.4 + ECharts 5.4.3
 
-**核心功能模块：**
+**路由模式**：`createWebHashHistory`（URL 带 `#`，无需 Nginx rewrite）
 
-| 模块 | 路径 | 功能描述 |
-|------|------|---------|
-| **认证模块** | `/auth/login`, `/auth/register` | 商家登录注册、密码重置 |
-| **仪表盘** | `/dashboard` | 销售数据统计、订单概览 |
-| **商品管理** | `/product/*` | 商品列表、添加编辑、规格管理 |
-| **订单管理** | `/order/*` | 订单列表、详情、发货处理 |
-| **售后处理** | `/aftersale` | 退换货申请审核 |
-| **营销工具** | `/coupon`, `/discount` | 优惠券、折扣活动 |
-| **客户服务** | `/customer-service/chat` | 与买家实时沟通 |
-| **评价管理** | `/review` | 商品评价查看与回复 |
-| **个人中心** | `/profile` | 店铺信息、账户设置 |
+**核心功能**（来自 `seller-web/src/router/index.js`）：
 
-**项目亮点：**
-- 📊 ECharts 数据可视化展示销售趋势
-- 💬 内置客服聊天系统
-- 🎨 Element Plus 企业级 UI 组件
-- 🔐 完整的商家认证流程
+| 路径 | 名称 | 功能 |
+|---|---|---|
+| `/login` | Login | 商家登录（账号密码 / 短信） |
+| `/register` | Register | 商家注册 |
+| `/dashboard` | Dashboard | 销售数据 + 订单概览 |
+| `/products` | ProductList | 商家自有商品列表 |
+| `/product/create` | ProductCreate | 新增商品 |
+| `/product/edit/:id` | ProductEdit | 编辑商品 |
+| `/orders` | OrderList | 订单列表 / 详情 / 发货 |
+| `/aftersale` | AfterSale | 退换货审核 |
+| `/coupons` | CouponManage | 优惠券管理（CRUD） |
+| `/discounts` | DiscountManage | 折扣/满减活动 |
+| `/customer-service` | CustomerService | 与买家实时沟通（STOMP） |
+| `/reviews` | ReviewManagement | 商品评价查看 / 回复 |
+| `/profile` | Profile | 店铺信息、账户设置 |
+
+**端口**：`5173`
+
+**Token 存储**：`localStorage.seller_token` + `localStorage.seller_user`
 
 ---
 
-### 4️⃣ web-mall - 用户商城前端 [Vue 3]
+### 4️⃣ web-mall - 用户商城 [Vue 3]
 
-**技术栈：**
-- **前端框架**：Vue 3.2.0
-- **构建工具**：Vite 4.0.0
-- **UI 组件库**：Element Plus 2.4.4
-- **状态管理**：Pinia 3.0.4
-- **路由**：Vue Router 4.6.4
-- **安全工具**：自定义 security.js（加密、token 管理）
+**技术栈**：Vue 3.2.0 + Vite 4.0.0 + Element Plus 2.4.4 + Pinia 3.0.4 + vue-router 4.6.4
 
-**用户端完整功能：**
+**路由模式**：`createWebHashHistory`（URL 带 `#`，无需 Nginx rewrite）
 
-#### 🏠 首页与浏览
-- **首页** (`/`) - Banner轮播、推荐商品、分类入口
-- **商品列表** (`/product/list`) - 分类筛选、搜索、排序
-- **商品详情** (`/product/detail/:id`) - 规格选择、加入购物车、立即购买
+**完整功能**（来自 `web-mall/src/router/index.js`）：
 
-#### 🛒 购物车与结算
-- **购物车** (`/cart`) - 商品数量调整、删除、全选、价格计算
-- **结算支付** (`/order/payment`) - 地址选择、优惠券使用、订单提交
+| 路径 | 名称 | 功能 |
+|---|---|---|
+| `/` | Home | 首页（Banner、推荐、分类入口、搜索） |
+| `/product/list` | ProductList | 分类筛选、关键词搜索、排序、分页 |
+| `/product/:id` | ProductDetail | 规格选择、加购物车、立即购买、客服 |
+| `/cart` | Cart | 数量调整、删除、全选、价格合计 |
+| `/order` | Order | 订单列表（全部 / 待付款 / 待发货 / 待收货） |
+| `/order-list` | OrderList | 订单列表（带 Tab） |
+| `/payment/:id` | OrderDetail | 结算 / 支付 / 订单详情 |
+| `/ai` | AI | AI 助手（DeepSeek 流式 SSE） |
+| `/service/chat` | ServiceChat | 智能客服（AI + 人工切换） |
+| `/profile` | Profile | 个人中心 |
+| `/security` | Security | 账户安全 / 密码 |
+| `/address` | AddressList | 收货地址列表 |
+| `/address-edit` | AddressEdit | 地址编辑 |
+| `/login` | Login | 账号 / 短信登录 |
+| `/register` | Register | 注册 |
+| `/reset-password` | ResetPassword | 短信验证码重置 |
+| `/coupon` | Coupon | 优惠券中心 |
+| `/discount` | Discount | 折扣活动 |
+| `/discount-detail/:id` | DiscountDetail | 折扣详情 |
+| `/activity/list` | ActivityList | 活动列表 |
+| `/activity/detail/:id` | ActivityDetail | 活动详情 |
+| `/aftersale/list` | AfterSaleList | 售后列表 |
+| `/aftersale/create` | AfterSaleCreate | 申请售后 |
+| `/aftersale/detail/:id` | AfterSaleDetail | 售后详情 |
+| `/review/order/:id` | OrderReview | 订单评价 |
 
-#### 📦 订单管理
-- **订单列表** (`/order/list`) - 全部订单、待付款、待收货、已完成
-- **订单详情** (`/order/:id`) - 物流跟踪、确认收货、申请售后
+**端口**：`5176`
 
-#### 👤 个人中心
-- **登录注册** (`/auth/login`, `/auth/register`)
-- **个人信息** (`/profile`) - 头像上传、资料修改
-- **地址管理** (`/address`) - 收货地址增删改查
-- **密码重置** (`/auth/reset-password`)
+**路由模式**：`createWebHashHistory`（URL 带 `#`，无需 Nginx rewrite）
 
-#### 🎉 营销活动
-- **优惠活动** (`/discount`) - 限时折扣、满减活动
-- **优惠券中心** (`/coupon`) - 领取优惠券、我的优惠券
+**Token 存储**：`localStorage.token` + `localStorage.user`
 
-#### 💬 特色功能
-- **智能客服** (`/service/chat`) - AI 客服 + 人工客服
-- **AI 助手** (`/ai`) - DeepSeek AI 智能问答
-- **售后服务** (`/after-sale/*`) - 申请售后、进度跟踪
-- **商品评价** (`/review/order-review`) - 订单评价
-
-**环境配置示例 (.env.development)：**
+**.env.development**：
 ```env
 VITE_API_BASE_URL=http://localhost:8081/api
 VITE_REQUEST_TIMEOUT=10000
@@ -236,114 +360,107 @@ VITE_UPLOAD_MAX_SIZE=5242880
 VITE_PAGE_SIZE=20
 ```
 
----
-
-### 5️⃣ mini-program - 微信小程序 [原生开发]
-
-**技术栈：**
-- **开发语言**：JavaScript (ES6+)
-- **框架**：微信小程序原生框架
-- **AppID**：wxa17d14480861589e
-- **UI 风格**：自定义 WXSS 样式
-
-**应用名称**：**乡村振兴**
-
-**TabBar 页面配置：**
-| 图标 | 页面路径 | 功能 |
-|------|---------|------|
-| 🏠 | `pages/home/home` | 首页 |
-| 📂 | `pages/category/category` | 分类浏览 |
-| 🛒 | `pages/cart/cart` | 购物车 |
-| 🎫 | `pages/coupon/index` | 优惠中心 |
-| 👤 | `pages/user/index` | 个人中心 |
-
-**完整页面清单：**
-
-| 页面 | 路径 | 功能说明 |
-|------|------|---------|
-| 首页 | `pages/home/home` | 推荐商品、Banner、搜索入口 |
-| 分类 | `pages/category/category` | 商品分类树形展示 |
-| 商品详情 | `pages/product/product` | 商品信息、规格选择、购买 |
-| 购物车 | `pages/cart/cart` | 购物车管理、结算 |
-| 订单列表 | `pages/order/list` | 我的订单列表 |
-| 订单详情 | `pages/order/order` | 订单详细信息 |
-| 个人中心 | `pages/user/index` | 用户信息、功能入口 |
-| 地址管理 | `pages/user/address` | 收货地址 CRUD |
-| 个人资料 | `pages/user/profile` | 头像昵称修改 |
-| AI助手 | `pages/ai/ai` | AI 智能问答 |
-| 售后列表 | `pages/aftersale/list` | 售后记录 |
-| 创建售后 | `pages/aftersale/create` | 发起售后申请 |
-| 售后详情 | `pages/aftersale/detail` | 售后进度查看 |
-| 优惠券 | `pages/coupon/index` | 优惠券领取和使用 |
-| 折扣活动 | `pages/discount/index` | 促销活动展示 |
-
-**核心工具函数：**
-- **请求封装** (`utils/request.js`) - 统一 API 请求、拦截器
-- **支付功能** (`utils/pay.js`) - 微信支付集成
-- **上传功能** (`utils/upload.js`) - 图片上传处理
-
-**窗口配置：**
-```json
-{
-  "navigationBarTitleText": "乡村振兴",
-  "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black",
-  "backgroundColor": "#f9fafb"
-}
+**.env.production**：
+```env
+VITE_API_BASE_URL=https://api.yourdomain.com/api
+VITE_REQUEST_TIMEOUT=15000
+VITE_UPLOAD_MAX_SIZE=5242880
+VITE_PAGE_SIZE=20
 ```
 
 ---
 
-## 🛠️ 技术栈总览
+### 5️⃣ mini-program - 微信小程序 [原生]
 
-### 后端技术栈
-| 技术 | 版本 | 用途 |
-|------|------|------|
-| Java | 8 | 编程语言 |
-| Spring Boot | 2.7.9 | 应用框架 |
-| Spring Security | 5.7.x | 安全框架 |
-| MyBatis-Plus | 3.5.3.1 | ORM 框架 |
-| MySQL | 8.0.33 | 关系型数据库 |
-| Redis | 7.x | 缓存数据库 |
-| JWT | 0.11.5 | Token 认证 |
-| Swagger | 3.0 | API 文档 |
-| WebSocket | - | 实时通信 |
-| Lombok | 1.18.30 | 代码简化 |
+**TabBar 5 个页面**（`app.json` 中定义）：
 
-### 前端技术栈（Web端）
-| 技术 | 版本 | 使用场景 |
-|------|------|---------|
-| Vue.js | 3.x | 前端框架 |
-| Vite | 4.x/5.x | 构建工具 |
-| Element Plus | 2.4.4 | UI 组件库 |
-| Pinia | 2.x/3.x | 状态管理 |
-| Vue Router | 4.x | 路由管理 |
-| Axios | 1.x | HTTP 客户端 |
-| ECharts | 5.4.3 | 数据可视化 |
-| STOMP.js | 7.3.0 | WebSocket 客户端 |
-| Sass | - | CSS 预处理 |
+| 顺序 | pagePath | 名称 |
+|---|---|---|
+| 1 | `pages/home/home` | 首页 |
+| 2 | `pages/category/category` | 分类 |
+| 3 | `pages/cart/cart` | 购物车 |
+| 4 | `pages/coupon/index` | 优惠 |
+| 5 | `pages/user/index` | 我的 |
 
-### 小程序技术栈
-| 技术 | 说明 |
-|------|------|
-| 微信小程序原生框架 | 小程序基础框架 |
-| WXML/WXSS | 页面结构和样式 |
-| JavaScript ES6+ | 业务逻辑 |
-| 微信支付 API | 支付功能 |
-| 微信登录 API | 用户认证 |
+**全部 21 个页面**（含非 TabBar，按 `app.json.pages` 顺序）：
+
+| 类型 | 页面 | 用途 |
+|---|---|---|
+| Tab | `pages/home/home` | 首页（推荐 / Banner / 搜索） |
+| Tab | `pages/category/category` | 分类浏览 |
+| Tab | `pages/cart/cart` | 购物车 |
+| Tab | `pages/coupon/index` | 优惠中心 |
+| Tab | `pages/user/index` | 我的 |
+| 商品 | `pages/product/product` | 商品详情 |
+| 订单 | `pages/order/list`, `pages/order/order` | 订单列表 / 详情 |
+| 用户 | `pages/user/address`, `pages/user/addressEdit` | 收货地址 |
+| 用户 | `pages/user/profile`, `pages/user/security` | 资料 / 安全 |
+| AI | `pages/ai/ai` | AI 助手 |
+| 售后 | `pages/aftersale/{list, create, detail}` | 售后三件套 |
+| 营销 | `pages/discount/index`, `pages/activity/{list, detail}` | 折扣 / 活动 |
+| 客服 | `pages/chat/chat` | 客服聊天 |
+| 评价 | `pages/review/review` | 商品评价 |
+
+**自定义组件**：`components/mall-icon`（图标库，`usingComponents` 已全局注册）
+
+**AppID**：`app.json` 中未硬编码，导入时使用"测试号"或填入自有 AppID（`project.config.json` 中可配置）。
+
+---
+
+### 6️⃣ shared-ui - 共享 UI 组件库
+
+跨三个前端复用的统一设计体系，被 `admin-web` `seller-web` `web-mall` 通过 Vite alias `@mall/shared-ui` 引用：
+
+```js
+// vite.config.js
+resolve: {
+  alias: {
+    '@': path.resolve(__dirname, './src'),
+    '@mall/shared-ui': path.resolve(__dirname, '../shared-ui')
+  }
+}
+```
+
+**目录结构**：
+
+```
+shared-ui/
+├── base.css                    # 基础样式
+├── design-tokens.css           # 设计 token（颜色 / 间距 / 字号）
+├── index.css                   # 入口聚合
+├── UI_DESIGN_SPECIFICATION.md  # UI 设计规范
+├── components/                 # 通用 CSS 组件样式
+│   ├── button.css card.css form.css
+│   ├── modal.css nav.css table.css
+│   └── tag.css
+├── utilities/                  # 通用 CSS 工具类
+│   ├── animations.css
+│   ├── layout.css
+│   ├── micro-interactions.css
+│   ├── spacing.css
+│   └── typography.css
+└── vue-components/             # 独立 Vue 组件（@mall/shared-ui）
+    ├── MlButton.vue  MlCard.vue  MlInput.vue
+    ├── MlModal.vue   MlTag.vue
+    ├── index.js      package.json
+```
+
+**复用方式**：三端 `package.json` 通过 Vite alias 引用 `@mall/shared-ui`，按需 import 即可使用。
 
 ---
 
 ## 🚀 快速开始
 
-### 环境要求
+### 0️⃣ 环境要求
 
-- **Node.js** >= 16.0.0（推荐 18.x LTS）
-- **Java JDK** = 8（必须为 JDK 8）
-- **Maven** >= 3.8.0
-- **MySQL** >= 8.0
-- **Redis** >= 6.0
-- **微信开发者工具**（仅小程序开发需要）
+| 工具 | 版本要求 | 说明 |
+|---|---|---|
+| Node.js | >= 16（推荐 18 LTS） | 前端 |
+| Java JDK | **必须 JDK 8** | 后端 |
+| Maven | >= 3.8 | 后端构建 |
+| MySQL | >= 8.0 | 数据库 |
+| Redis | >= 6.0 | 缓存 |
+| 微信开发者工具 | 最新版 | 小程序（可选） |
 
 ### 1️⃣ 克隆项目
 
@@ -354,115 +471,134 @@ cd mall_system_extended
 
 ### 2️⃣ 数据库初始化
 
+后端有 **3 个初始化 SQL + 4 个迁移 SQL**，按顺序执行：
+
 ```bash
-# 进入后端目录
 cd backend
 
-# 执行数据库初始化脚本（按顺序执行）
+# 1. 建表
 mysql -u root -p < src/main/resources/sql/schema.sql
+
+# 2. 测试数据
 mysql -u root -p < src/main/resources/sql/data.sql
+
+# 3. 完整初始化（500 行，表+数据）
 mysql -u root -p < src/main/resources/sql/init_database.sql
 ```
 
-**或使用 MySQL 客户端工具导入 SQL 文件。**
+如有版本升级，按编号顺序执行迁移脚本：
+```bash
+mysql -u root -p < src/main/resources/sql/migrate_cart_unique_index.sql
+mysql -u root -p < src/main/resources/sql/migrate_cart_unique_virtual_column.sql
+mysql -u root -p < src/main/resources/sql/migrate_drop_order_sn.sql
+mysql -u root -p < src/main/resources/sql/migrate_unique_order_no.sql
+```
 
-### 3️⃣ 启动 Redis 服务
+> 数据库名默认 `minimall`，用户名 `root`，密码从 `application.yml` / `.env` 读取（**切勿在 README 写明文密码**）。
+
+### 3️⃣ 启动 Redis
 
 ```bash
-# Windows (需先安装 Redis)
+# Windows（需先安装 Redis for Windows）
 redis-server
 
-# 或使用 Docker
+# 或用 Docker
 docker run -d --name redis -p 6379:6379 redis:7-alpine
 ```
 
 ### 4️⃣ 配置环境变量
 
-在 `backend` 目录下创建 `.env` 文件：
+在 `backend/` 下复制 `.env.example` 为 `.env`：
 
+```bash
+cd backend
+cp .env.example .env
+# 编辑 .env，填入真实密码和 API Key
+```
+
+`.env` 内容模板（**所有值仅作占位示例，请替换为你自己的密钥后提交**）：
 ```env
-# 数据库配置
+# 数据库
 DB_HOST=localhost
 DB_PORT=3306
 DB_NAME=minimall
 DB_USERNAME=root
-DB_PASSWORD=你的密码
+DB_PASSWORD=<YOUR_DB_PASSWORD>             # ← 改为你的 MySQL 密码
 
-# Redis 配置
+# Redis
 REDIS_HOST=localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=
+REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY>
+REDIS_DATABASE=0
 
 # 服务端口
 SERVER_PORT=8081
 
-# DeepSeek AI 配置（可选）
-DEEPSEEK_API_KEY=your-api-key
+# DeepSeek AI（必填，否则 AI 走降级）
+DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY>   # ← 从 https://platform.deepseek.com 申请
+
+# Embedding（用于 RAG，可选）
+EMBEDDING_API_URL=https://api.openai.com/v1/embeddings
+EMBEDDING_API_KEY=<YOUR_EMBEDDING_API_KEY> # ← 与 OpenAI 兼容的 Embedding Key
+EMBEDDING_MODEL=text-embedding-3-small
+EMBEDDING_DIMENSIONS=1536
+
+# JWT
+JWT_SECRET=<YOUR_256BIT_RANDOM_SECRET>     # ← 用 openssl rand -base64 64 生成
+JWT_EXPIRATION=86400000
 ```
 
-### 5️⃣ 启动后端服务
+### 5️⃣ 启动后端
 
 ```bash
 cd backend
-
-# 方式一：Maven 运行（推荐）
 mvn spring-boot:run
-
-# 方式二：打包后运行
+# 或
 mvn clean package -DskipTests
 java -jar target/minimall-0.0.1-SNAPSHOT.jar
 ```
 
-✅ **验证后端启动成功：**
-- 访问：http://localhost:8081
-- Swagger 文档：http://localhost:8081/swagger-ui.html
+**启动成功标志**：
+- 控制台打印 `Started MinimaMallApplication in X.XXX seconds`
+- 端口 8081 已监听：`netstat -an | findstr :8081`
+- Swagger 文档可访问：http://localhost:8081/swagger-ui/index.html
 
 ### 6️⃣ 安装前端依赖
 
 ```bash
-# 安装所有前端项目的依赖
+# 三个前端都要装
 npm install --prefix admin-web
 npm install --prefix seller-web
 npm install --prefix web-mall
 ```
 
-### 7️⃣ 启动前端服务
+### 7️⃣ 启动前端
 
-#### 管理后台 (admin-web)
+每个前端用独立终端：
 
-```bash
-cd admin-web
-npm run dev
-```
+| 前端 | 命令 | 端口 | 默认账号 |
+|---|---|---|---|
+| 管理后台 | `cd admin-web && npm run dev` | 3001 | `admin / <INITIAL_PASSWORD>` |
+| 商家端 | `cd seller-web && npm run dev` | 5173 | 商家账号（用 admin 登录后创建） |
+| 用户商城 | `cd web-mall && npm run dev` | 5176 | 注册新账号 |
 
-访问：http://localhost:3001
+### 8️⃣ 启动微信小程序（可选）
 
-默认管理员账号：`admin / admin123`
+1. 安装 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
+2. 打开工具 → 导入项目 → 目录选 `mini-program/`
+3. AppID 用 `wxa17d14480861589e`（项目已有）或切换到"测试号"
+4. 详情 → 本地设置 → **关闭** "不校验合法域名"（开发期）
 
-#### 商家端 (seller-web)
-
-```bash
-cd seller-web
-npm run dev
-```
-
-访问：http://localhost:5173（或查看终端输出）
-
-#### 用户商城 (web-mall)
+### 9️⃣ 一键启动（Windows 批处理）
 
 ```bash
-cd web-mall
-npm run dev
+# 根目录有 start-all.bat，一键启动 4 个服务
+start-all.bat
 ```
 
-访问：http://localhost:5174（或查看终端输出）
+启动后会自动打开 3 个浏览器标签页（admin 3001 / seller 5173 / web-mall 5176）。
 
-### 8️⃣ 启动微信小程序
-
-1. 安装 **微信开发者工具**
-2. 打开开发者工具，导入 `mini-program` 目录
-3. 在 `project.config.json` 中填入您的 AppID（或使用测试号）
-4. 点击编译按钮即可预览
+对应停止：`stop-all.bat`
 
 ---
 
@@ -471,194 +607,371 @@ npm run dev
 ```
 mall_system_extended/
 │
-├── backend/                     # 后端服务（Spring Boot）
-│   ├── src/main/java/
-│   │   └── com/example/minimall/
-│   │       ├── controller/      # REST API 控制器
-│   │       ├── service/         # 业务逻辑层
-│   │       ├── mapper/          # 数据访问层
-│   │       ├── model/           # 实体类
-│   │       ├── config/          # 配置类
-│   │       ├── dto/             # 数据传输对象
-│   │       ├── vo/              # 视图对象
-│   │       ├── utils/           # 工具类
-│   │       └── security/        # 安全相关
+├── backend/                          # 后端（Spring Boot 2.7.9）
+│   ├── src/main/java/com/example/minimall/
+│   │   ├── MinimaMallApplication.java
+│   │   ├── annotation/ common/ config/ constants/ context/
+│   │   ├── controller/               # 29 个 REST 控制器
+│   │   ├── dto/ enums/ exception/ filter/ initializer/
+│   │   ├── interceptor/              # 4 个拦截器
+│   │   ├── mapper/                   # 43 个 Mapper
+│   │   ├── model/                    # 43 个实体
+│   │   ├── security/ service/ utils/ vo/ websocket/
 │   ├── src/main/resources/
-│   │   ├── mapper/              # MyBatis XML
-│   │   ├── sql/                 # 数据库脚本
-│   │   ├── static/              # 静态资源
-│   │   └── application.yml      # 配置文件
-│   ├── lib/                     # 本地依赖 JAR 包
-│   ├── pom.xml                  # Maven 配置
-│   └── Dockerfile               # Docker 构建文件
+│   │   ├── mapper/                   # 22 个 MyBatis XML
+│   │   ├── sql/                      # 3 init + 4 migrate
+│   │   ├── static/images/
+│   │   ├── application.yml
+│   │   └── logback-spring.xml
+│   ├── src/test/                     # 单元 + 集成测试
+│   ├── pom.xml
+│   ├── Dockerfile
+│   ├── api_test.ps1
+│   └── .env.example
 │
-├── admin-web/                   # 管理后台前端（Vue 3 + TS）
-│   ├── src/
-│   │   ├── api/                 # API 接口封装
-│   │   ├── views/               # 页面组件
-│   │   ├── components/          # 公共组件
-│   │   ├── stores/              # Pinia 状态管理
-│   │   ├── router/              # 路由配置
-│   │   ├── composables/         # 组合式函数
-│   │   ├── layouts/             # 布局组件
-│   │   ├── styles/              # 全局样式
-│   │   └── utils/               # 工具函数
-│   ├── package.json
-│   └── vite.config.ts
+├── admin-web/                        # 管理后台（Vue3 + TS）
+│   └── src/
+│       ├── api/                      # 12 个 API 模块
+│       ├── composables/              # useChatNotification, useStompClient
+│       ├── layouts/ router/ stores/ styles/ types/ utils/ views/
+│       ├── App.vue main.ts
+│       └── auto-imports.d.ts components.d.ts
 │
-├── seller-web/                  # 商家管理端（Vue 3）
-│   ├── src/
-│   │   ├── views/               # 页面视图
-│   │   ├── components/          # 组件
-│   │   ├── stores/              # 状态管理
-│   │   ├── router/              # 路由
-│   │   ├── utils/               # 工具
-│   │   └── layouts/             # 布局
-│   ├── public/images/           # 静态图片资源
-│   └── package.json
+├── seller-web/                       # 商家管理端（Vue3，hash 路由）
+│   └── src/{views, components, stores, router, utils, layouts, composables}
 │
-├── web-mall/                    # 用户商城前端（Vue 3）
-│   ├── src/
-│   │   ├── views/               # 页面（按功能模块组织）
-│   │   ├── components/          # 可复用组件
-│   │   ├── stores/              # 状态管理（cart, user）
-│   │   ├── router/              # 路由配置
-│   │   ├── utils/               # 工具函数（api, security）
-│   │   └── composables/         # 组合式函数
-│   ├── public/images/           # 商品图片资源
-│   ├── .env.development         # 开发环境变量
-│   └── .env.production          # 生产环境变量
+├── web-mall/                         # 用户商城（Vue3，hash 路由）
+│   ├── src/{views, components, stores, router, utils, composables}
+│   ├── .env.development
+│   └── .env.production
 │
-├── mini-program/                # 微信小程序
-│   ├── pages/                   # 页面目录
-│   │   ├── home/                # 首页
-│   │   ├── category/            # 分类
-│   │   ├── product/             # 商品
-│   │   ├── cart/                # 购物车
-│   │   ├── order/               # 订单
-│   │   ├── user/                # 用户中心
-│   │   ├── ai/                  # AI助手
-│   │   ├── aftersale/           # 售后
-│   │   ├── coupon/              # 优惠券
-│   │   └── discount/            # 折扣活动
-│   ├── utils/                   # 工具函数
-│   ├── app.js                   # 小程序入口
-│   ├── app.json                 # 全局配置
-│   └── project.config.json      # 项目配置
+├── shared-ui/                        # 跨端共享 UI（CSS 工具 + Vue 组件）
+│   ├── base.css design-tokens.css index.css UI_DESIGN_SPECIFICATION.md
+│   ├── components/                   # 7 个 CSS 组件样式
+│   ├── utilities/                    # 5 个 CSS 工具类
+│   └── vue-components/               # 5 个 Vue 组件
 │
-├── docker-compose.yml           # Docker 编排配置
-├── docs/                        # 项目文档
-└── README.md                    # 本文件
+├── mini-program/                     # 微信小程序（原生，21 个页面）
+│   ├── pages/{home, category, product, cart, coupon, user, ai, aftersale, discount, activity, chat, order, review}/
+│   ├── components/mall-icon/
+│   ├── app.{js, json, wxss}
+│   └── cloudbaserc.json
+│
+├── docs/                             # 项目文档
+│   ├── PERFORMANCE_REPORT.md
+│   ├── RAG_TECHNICAL_DOCUMENTATION.md
+│   ├── SYSTEM_OPTIMIZATION_DOCUMENTATION.md
+│   └── usecase-*.{drawio, png, svg, puml, mmd}   # 5 个用例图
+│
+├── .devcontainer/                    # VSCode 容器化开发环境
+│   ├── devcontainer.json
+│   ├── docker-compose.yml
+│   └── init.sh
+│
+├── start-all.bat                     # Windows 一键启动
+├── stop-all.bat                      # Windows 一键停止
+├── docker-compose.yml                # 根级容器编排（MySQL + Backend）
+├── 答辩准备.md                       # 毕业答辩 Q&A（113 个高频问题 + 7 大数据流追踪）
+└── README.md                         # 本文件
 ```
 
 ---
 
 ## 🔌 API 接口文档
 
-### Swagger UI 访问地址
+### Swagger UI
 
-启动后端服务后，访问以下地址查看完整的 API 文档：
+启动后端后访问：
 
-**本地环境：**
 ```
-http://localhost:8081/swagger-ui.html
+http://localhost:8081/swagger-ui/index.html
 ```
 
-### 主要 API 模块
+> **注意**：本项目用 **Springfox 3.0.0**，访问路径是 `/swagger-ui/index.html`（**不是** `/swagger-ui.html`）。
 
-| 模块 | 基础路径 | 功能说明 |
-|------|---------|---------|
-| 认证接口 | `/api/auth/**` | 登录、注册、Token刷新 |
-| 用户接口 | `/api/users/**` | 用户信息、地址管理 |
-| 商品接口 | `/api/products/**` | 商品CRUD、分类、搜索 |
-| 订单接口 | `/api/orders/**` | 订单创建、查询、取消 |
-| 购物车 | `/api/cart/**` | 购物车操作 |
-| 支付接口 | `/api/payment/**` | 支付、退款 |
-| 优惠券 | `/api/coupons/**` | 优惠券领取、使用 |
-| 活动接口 | `/api/activities/**` | 促销活动 |
-| 售后接口 | `/api/aftersales/**` | 售后申请、处理 |
-| 聊天接口 | `/api/chat/**` | 客服消息、会话管理 |
-| 上传接口 | `/api/upload/**` | 文件上传 |
-| 系统接口 | `/api/system/**` | 系统配置 |
+### API 模块清单（共 28 个 Controller）
 
-### 认证方式
+| 模块 | 基础路径 | 主要端点 | 鉴权 |
+|---|---|---|---|
+| 认证 | `/api/auth/**` | login / logout / register / sendCode / loginByCode / bindPhone / resetPassword / passwordRules / user | 部分公开 |
+| 用户 | `/api/user/**` | list / detail / update | JWT |
+| 商家 | `/api/seller/**` | list / audit / detail / register | JWT + seller |
+| 商品 | `/api/product/**` | list / recommended / detail / categories / search | 公开 |
+| 商品分类 | `/api/product-category/**` | tree / list | 公开 |
+| 分类 | `/api/category/**` | list / top / children / create / update-status | 部分 JWT |
+| 购物车 | `/api/cart/**` | list / add / update-quantity / update-checked / delete / clear | JWT |
+| 订单 | `/api/order/**` | create / list / pay / cancel / confirm / ship / detail / status | JWT |
+| 售后 | `/api/aftersale/**` | list / apply / approve / detail | JWT |
+| 售后聊天 | `/api/aftersale/chat/**` | send / history / unread-count | JWT |
+| 优惠券 | `/api/coupon/**` | list / create / claim / available / update | JWT |
+| 活动 | `/api/activity/**` | list / detail | 公开 |
+| 折扣 | `/api/discount/**` | list / detail | 公开 |
+| 聊天 | `/api/chat/**` | session / messages / send / read / monitor | JWT |
+| 客服 | `/api/cs/**` | agent / transfer / faq | JWT + agent |
+| 管理聊天 | `/api/admin/chat/**` | sessions / messages | JWT + admin |
+| 人工介入 | `/api/admin/intervention/**` | intervene / assign / process | JWT + agent |
+| 上传 | `/api/upload/**` | image | JWT |
+| 图片 | `/api/image/**` | static | 公开 |
+| 验证码 | `/api/captcha/**` | image | 公开 |
+| 短信 | `/api/sms/**` | send-code | 公开 |
+| 评价 | `/api/review/**` | list / create | 部分公开 |
+| AI | `/api/ai/**` | query / chat (SSE) / rag-query / rag-chat / logs / monitor/* | JWT |
+| 知识库 | `/api/knowledge/**` | document / chunk / faq / stats | JWT + admin |
+| FAQ | `/api/faq/**` | list / match | JWT |
+| 系统 | `/api/system/**` | dashboard / config | JWT + admin |
+| 调试 | `/api/debug/**` | reset / ping | dev only |
 
-所有需要认证的接口需要在请求头中携带 JWT Token：
+### 鉴权方式
+
+所有需要登录的接口在 Header 携带 JWT：
 
 ```http
-Authorization: Bearer <your-jwt-token>
+Authorization: Bearer <token>
 ```
 
-**获取 Token：**
+**获取 Token**：
 ```bash
 POST /api/auth/login
 Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "admin123"
+  "password": "<YOUR_PASSWORD>",
+  "captchaKey": "<CAPTCHA_UUID>",
+  "captchaCode": "<CAPTCHA_TEXT>"
 }
 ```
 
----
-
-## 🐳 Docker 部署（可选）
-
-项目提供 Docker 支持，可快速部署整个系统：
-
-### 使用 docker-compose
-
-```bash
-# 在项目根目录执行
-docker-compose up -d
+返回：
+```json
+{
+  "code": 0,
+  "data": {
+    "token": "<JWT_TOKEN>",
+    "user": { "id": 1, "username": "admin", "userType": 2 },
+    "expiration": 1720867200000
+  }
+}
 ```
 
-这将自动启动：
-- MySQL 8.0 数据库
-- Redis 缓存服务
-- Spring Boot 后端应用
+### 角色类型
 
-### 单独构建后端镜像
+| userType | 角色 | 登录入口 |
+|---|---|---|
+| 0 | 买家 | web-mall / mini-program |
+| 1 | 商家 | seller-web |
+| 2 | 管理员 | admin-web |
+
+---
+
+## 🐳 Docker 部署
+
+### 根级 docker-compose（MySQL + Backend）
+
+```bash
+docker-compose up -d
+# 启动 MySQL 8.0（root 密码、库名从 .env / docker-compose.yml 配置，**不要硬编码**）
+# 与后端服务（注意：compose 中端口映射为 8080:8080，与 application.yml 默认 8081 不一致）
+```
+
+**compose 中后端服务参数**（`docker-compose.yml`）：
+
+| 项 | 值 | 说明 |
+|---|---|---|
+| `image` | `mysql:8.0` | 数据库 |
+| `MYSQL_ROOT_PASSWORD` | `<YOUR_MYSQL_ROOT_PASSWORD>` | 跟 `DB_PASSWORD` 不一致，**需手动同步** |
+| Backend 端口 | `8080:8080` | 与后端默认 8081 不一致，**需手动同步** |
+| Backend 环境变量 | `SPRING_DATASOURCE_URL` 等 | 用了 Spring 原生变量名（不是 `DB_*`） |
+
+> **建议**：本地调试推荐用 `start-all.bat` 直接起后端（端口 8081），docker-compose 适合 CI/生产。
+
+### 单独构建后端
 
 ```bash
 cd backend
 docker build -t minimall-backend .
 docker run -d -p 8081:8081 \
   -e DB_HOST=host.docker.internal \
+  -e DB_PASSWORD=<YOUR_DB_PASSWORD> \
   -e REDIS_HOST=host.docker.internal \
+  -e REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY> \
+  -e DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY> \
   minimall-backend
+```
+
+> **注意**：根目录 `docker-compose.yml` 中后端服务暴露端口为 `8080:8080`（与 application.yml 默认 8081 不一致），如需统一请修改 compose 文件或环境变量 `SERVER_PORT`。
+
+### 完整生产部署（推荐）
+
+```bash
+# 本地推荐用 start-all.bat 直接起后端（端口 8081）
+# 若用 docker，需在 env_file / .env 中填好真实 DB 密码、Redis 密码、AI Key
+docker run -d --name mysql -p 3306:3306 \
+  -e MYSQL_ROOT_PASSWORD=<YOUR_MYSQL_ROOT_PASSWORD> \
+  -e MYSQL_DATABASE=minimall \
+  -v mysql_data:/var/lib/mysql \
+  mysql:8.0
+
+docker run -d --name redis -p 6379:6379 \
+  --requirepass <YOUR_REDIS_PASSWORD_OR_OMIT> \
+  redis:7-alpine
+
+# 2. 启动后端
+cd backend && mvn clean package -DskipTests
+docker build -t minimall-backend .
+docker run -d --name backend -p 8081:8081 \
+  --link mysql --link redis \
+  -e DB_HOST=mysql -e REDIS_HOST=redis \
+  -e SERVER_PORT=8081 \
+  -e DB_PASSWORD=<YOUR_DB_PASSWORD> \
+  -e REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY> \
+  -e DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY> \
+  minimall-backend
+
+# 3. 前端打包
+cd admin-web && npm run build   # dist/
+cd seller-web && npm run build
+cd web-mall && npm run build
+
+# 4. Nginx 反向代理（参考 .devcontainer/init.sh 中的 nginx 配置）
 ```
 
 ---
 
 ## 📊 数据库设计
 
-### 核心数据表
+### 核心表（36 张）
 
 | 表名 | 说明 | 主要字段 |
-|------|------|---------|
-| `users` | 用户表 | id, username, password, phone, role |
-| `products` | 商品表 | id, name, price, stock, category_id, seller_id |
-| `categories` | 分类表 | id, name, parent_id, level |
-| `orders` | 订单表 | id, user_id, total_amount, status, order_no |
-| `order_items` | 订单项表 | id, order_id, product_id, quantity, price |
-| `cart` | 购物车表 | id, user_id, product_id, quantity |
-| `coupons` | 优惠券表 | id, name, discount, valid_start, valid_end |
-| `activities` | 活动表 | id, title, type, discount, status |
-| `chat_sessions` | 会话表 | id, user_id, agent_id, status |
-| `chat_messages` | 消息表 | id, session_id, sender_type, content |
-| `aftersales` | 售后表 | id, order_id, reason, status |
+|---|---|---|
+| `user` | 用户表（含买家/商家/管理员） | id, username, phone, password, user_type, openid |
+| `product` | 商品表 | id, name, price, stock, sales, category_id, seller_id, status |
+| `category` | 商品分类（树形） | id, name, parent_id, sort |
+| `product_spec` | 商品规格 | id, product_id, name, price, stock |
+| `product_image` | 商品图片 | id, product_id, url, sort |
+| `product_tag` | 商品标签 | id, name |
+| `cart` | 购物车 | id, user_id, product_id, quantity, checked |
+| `orders` | 订单主表 | id, order_no, user_id, total_price, status, address_id |
+| `order_item` | 订单项 | id, order_id, product_id, quantity, price |
+| `payment` | 支付记录 | id, order_id, amount, pay_status |
+| `coupon` | 优惠券模板 | id, seller_id, name, threshold, discount_value, total_count |
+| `user_coupon` | 用户领取的优惠券 | id, user_id, coupon_id, status, used_time |
+| `activity` | 促销活动 | id, title, type, start_time, end_time |
+| `discount_activity` | 满减/折扣活动 | id, name, threshold, discount_amount |
+| `shipping_address` | 收货地址 | id, user_id, consignee, phone, address |
+| `after_sale_service` | 售后服务 | id, order_id, type, reason, status |
+| `product_review` | 商品评价 | id, product_id, user_id, content, rating |
+| `chat_session` | 聊天会话 | id, user_id, agent_id, status |
+| `chat_message` | 聊天消息 | id, session_id, from_user_id, content, type |
+| `chat_notification` | 聊天通知 | id, user_id, content, is_read |
+| `ai_service_log` | AI 调用日志 | id, user_id, query, response, service_type |
+| `knowledge_document` | 知识库文档 | id, title, content, status |
+| `knowledge_chunk` | 文档分块 | id, document_id, content, embedding |
+| `knowledge_faq` | 知识库 FAQ | id, question, answer, embedding |
+| `admin_intervention` | 人工介入记录 | id, session_id, reason, status |
+| `logistics` | 物流 | id, order_id, company, tracking_no |
+| `logistics_trace` | 物流轨迹 | id, logistics_id, trace, time |
+| `role` | 角色 | id, code, name |
+| `permission` | 权限 | id, code, name, type |
+| `user_role` | 用户-角色关联 | user_id, role_id |
+| `role_permission` | 角色-权限关联 | role_id, permission_id |
+| `system_config` | 系统配置 | id, key, value |
+| `service_record` | 服务记录 | id, user_id, type, content |
 
-### 数据库初始化脚本位置
+> 完整建表 SQL 见 [`backend/src/main/resources/sql/schema.sql`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/backend/src/main/resources/sql/schema.sql) 和 [`init_database.sql`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/backend/src/main/resources/sql/init_database.sql)
+
+---
+
+## 🤖 AI / RAG 模块
+
+系统集成 DeepSeek 大模型 + 自研 RAG 检索增强，是答辩亮点。
+
+### 流程图
 
 ```
-backend/src/main/resources/sql/
-├── schema.sql              # 数据库建表语句
-├── init_database.sql       # 初始数据
-├── data.sql                # 测试数据
-├── add_test_data.sql       # 补充测试数据
-└── after_sale_system.sql   # 售后系统相关表
+用户提问 → POST /api/ai/chat
+              ↓
+       AIService.handleQueryStream()
+              ↓
+       ┌──────┴──────┐
+       │             │
+   开启 SSE     记录日志
+   emitter=     (ai_service_log)
+   new(60s)          ↓
+       │       EmbeddingService.embed(query) → 向量(1536 维)
+       │             ↓
+       │       RagService.retrieve() → top-k=5 文档块
+       │             ↓
+       │       + FAQ top-k=3（intention 分类后路由）
+       │             ↓
+       │       组装 prompt：系统指令 + 上下文 + 历史(6 轮)
+       │             ↓
+       │       DeepSeek streamChat() → 逐 chunk 推
+       │             ↓
+       │       SseEmitter.send(chunk) → 浏览器 EventSource
+       ↓             ↓
+   返回 emitter    UPDATE ai_service_log SET response=完整文本
 ```
+
+### 关键配置
+
+`application.yml`：
+```yaml
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  model: deepseek-v4-flash
+  temperature: 0.7
+
+embedding:
+  api-url: ${EMBEDDING_API_URL:https://api.deepseek.com/embeddings}
+  model: text-embedding-3-small
+  dimensions: 1536
+
+rag:
+  enabled: true
+  chunk-size: 500
+  chunk-overlap: 100
+  top-k: 5
+  faq-top-k: 3
+  similarity-threshold: 0.65
+  multi-turn-enabled: true
+  conversation-history-turns: 6
+```
+
+### 降级策略
+
+- 没配 `DEEPSEEK_API_KEY` → 返回 `ai.reply.common-queries` 静态文本（见 application.yml）
+- 没配 `EMBEDDING_API_KEY` → 用本地 TF-IDF 降级
+- RAG 关（`rag.enabled: false`）→ 直接调 DeepSeek
+
+详见 [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/RAG_TECHNICAL_DOCUMENTATION.md)
+
+---
+
+## 📊 可观测性
+
+| 维度 | 实现 | 端点 |
+|---|---|---|
+| 健康检查 | Spring Boot Actuator | `GET /actuator/health` |
+| 详细健康 | show-details: when-authorized | 需登录 |
+| Prometheus 指标 | Micrometer | `GET /actuator/prometheus` |
+| 应用指标 | /actuator/metrics | `/actuator/metrics/{name}` |
+| 链路追踪 | TraceIdFilter + MDC | 日志中自动加 `traceId=` |
+| 慢请求监控 | PerformanceInterceptor | 阈值 500ms 打 warn 日志 |
+| SQL 日志 | logback + Slf4j | `org.apache.ibatis=DEBUG` 时开启 |
+| API 日志 | ApiLoggingInterceptor | INFO 记录所有请求 |
+
+**Prometheus 抓取示例**：
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'minimall'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['localhost:8081']
+```
+
+详见 [`docs/PERFORMANCE_REPORT.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/PERFORMANCE_REPORT.md) 和 [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md)
 
 ---
 
@@ -666,155 +979,177 @@ backend/src/main/resources/sql/
 
 ### 代码规范
 
-#### 后端 (Java)
-- 遵循阿里巴巴 Java 开发手册
-- 使用 Lombok 减少样板代码
-- Controller 层只做参数校验和调用 Service
-- Service 层处理业务逻辑
-- Mapper/DAO 层只做数据访问
+#### 后端（Java）
+- 遵循 **阿里巴巴 Java 开发手册**
+- 使用 **Lombok** 减少样板代码
+- Controller 只做参数校验 + 调 Service
+- Service 处理业务 + 事务
+- Mapper 只做数据访问
+- 复杂查询写在 `resources/mapper/*.xml` 中
+- 业务异常抛 `BusinessException`，由 `GlobalExceptionHandler` 统一处理
 
-#### 前端 (Vue 3)
-- 使用 Composition API (`<script setup>`)
-- 组件命名采用 PascalCase
-- 使用 Pinia 进行状态管理
-- API 统一封装在 `src/api/` 目录
-- 样式使用 scoped 避免污染
+#### 前端（Vue 3）
+- 使用 **Composition API**（`<script setup>`）
+- 组件名 **PascalCase**
+- API 统一在 `src/api/` 目录
+- 全局组件自动导入（unplugin-auto-import）
+- 样式 **scoped** 避免污染
+- 多端复用组件放 `shared-ui/`
 
 #### 小程序
-- 页面独立目录，包含四个文件（js/json/wxml/wxss）
-- 使用 Promise 封装微信 API
-- 工具函数统一放在 `utils/` 目录
+- 页面独立目录（js/json/wxml/wxss 四个文件）
+- 工具函数统一放 `utils/`
+- 网络请求用 `wx.request` 封装
 
 ### Git 提交规范
+
+使用 Conventional Commits：
 
 ```
 feat: 新功能
 fix: 修复 bug
 docs: 文档更新
-style: 代码格式调整
-refactor: 重构代码
-test: 测试相关
+style: 代码格式
+refactor: 重构
+test: 测试
 chore: 构建/工具链
 perf: 性能优化
-```
-
-示例：
-```bash
-git commit -m "feat: 添加商品搜索功能"
-git commit -m "fix: 修复购物车数量计算错误"
 ```
 
 ### 分支策略
 
 ```
-main          ← 生产环境稳定版本
-  ├─ develop  ← 开发主分支
-  │   ├─ feature/xxx    ← 新功能分支
-  │   ├─ fix/xxx        ← Bug 修复分支
-  │   └─ hotfix/xxx     ← 紧急修复分支
+main               ← 生产稳定
+  ├─ develop       ← 开发主分支
+  │   ├─ feature/xxx   ← 新功能
+  │   ├─ fix/xxx       ← Bug 修复
+  │   └─ refactor/xxx  ← 重构
 ```
+
+### 🧪 测试
+
+| 类型 | 工具 | 位置 |
+|---|---|---|
+| 单元测试 | JUnit 5 + Mockito | `backend/src/test/java/com/example/minimall/**/*Test.java` |
+| 集成测试 | SpringBootTest + H2 内存库 | `backend/src/test/java/.../integration/` |
+| WebSocket 端到端 | STOMP 客户端模拟 | `ChatMessageDeliveryE2ETest` |
+| API 烟测（手动） | PowerShell | `backend/api_test.ps1` |
+| 监控指标 | Micrometer Prometheus | `/actuator/prometheus` |
+
+主要单测覆盖：`AIService`、`RagService`、`HnswIndex`、`EmbeddingService`、`IntentClassifierService`、`RagMonitorService`、`ContentFilterService`、`ProductContextOptimizer`、`ChatService`、`PermissionInterceptor`、`XssFilter`、`TraceIdFilter`、`GlobalExceptionHandler` 等。
 
 ---
 
-## ❓ 常见问题解答 (FAQ)
+## ❓ FAQ
 
 ### Q1: 后端启动失败，提示数据库连接错误？
 
-**A:** 请检查以下几点：
-1. MySQL 服务是否已启动
-2. `application.yml` 中的数据库配置是否正确
-3. 数据库名称 `minimall` 是否已创建
-4. 用户名密码是否匹配
+**A:** 检查：
+1. MySQL 已启动：`net start mysql` 或 `mysqld`
+2. `application.yml` / `.env` 中 `DB_HOST` / `DB_PORT` / `DB_USERNAME` / `DB_PASSWORD` 正确（**不要把真实密码 commit 到 git**）
+3. 数据库 `minimall` 已创建：`mysql -u root -p -e "CREATE DATABASE minimall"`
+4. 已执行 `schema.sql` / `data.sql` / `init_database.sql`
 
-```bash
-# 测试数据库连接
-mysql -u root -p -h localhost -e "SELECT 1"
-```
+### Q2: 前端无法连接后端 API（`ERR_CONNECTION_REFUSED`）？
 
-### Q2: 前端无法连接后端 API？
-
-**A:** 检查代理配置：
-1. 确认后端服务运行在 `8081` 端口
-2. 检查 Vite 配置中的 proxy 设置
-3. 查看 `.env.development` 中的 `VITE_API_BASE_URL`
+**A:** 这是最常见的启动问题，原因有三个：
+1. **后端根本没起来** —— 检查 `logs/backend.log` 是否有 `BUILD FAILURE` 或异常
+   - **典型坑**：`AIService.java` 等源文件带了 **UTF-8 BOM** 会导致 Maven 编译失败
+2. 后端编译成功但端口被占 —— `netstat -aon | findstr :8081`
+3. 跨域：开发期 Vite 已配 proxy（`/api → :8081`），生产期需 Nginx
 
 ### Q3: Redis 连接失败？
 
-**A:**
-1. 确保 Redis 服务已启动：`redis-server`
-2. 检查 Redis 端口是否为 `6379`
-3. 如有密码，请在 `.env` 中配置 `REDIS_PASSWORD`
+**A:** `redis-server` 是否启动（端口 6379）；如设了密码，需在 `REDIS_PASSWORD` 配置。
 
-### Q4: 小程序无法请求后端接口？
+### Q4: 商家创建优惠券报"卖家无权访问该接口"（403）？
 
-**A:**
-1. 微信小程序要求 HTTPS，开发阶段需勾选"不校验合法域名"
-2. 在微信开发者工具 → 详情 → 本地设置中关闭域名校验
-3. 确保后端已配置 CORS 跨域
+**A:** 这是 `PermissionInterceptor` 的白名单 bug。已修复：SELLER_COUPON_PATTERN 放行 `POST /api/coupon`、`PUT/DELETE /api/coupon/{id}`。
 
-### Q5: 如何重置管理员密码？
+详见 [`答辩准备.md` 九.1 节](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/%E7%AD%94%E8%BE%A9%E5%87%86%E5%A4%87.md)。
 
-**A:** 直接修改数据库或使用初始账号：
-- 默认管理员：`admin / admin123`
-- 可通过 SQL 重置：`UPDATE users SET password='新密码' WHERE username='admin'`
-
-### Q6: 图片上传失败？
+### Q5: 微信小程序无法请求后端？
 
 **A:**
-1. 检查 `uploads/` 目录是否存在且有写入权限
-2. 确认图片大小不超过 10MB
+1. 微信小程序要求 HTTPS，开发期勾选"不校验合法域名"
+2. 微信开发者工具 → 详情 → 本地设置 → 关闭域名校验
+3. 后端 CORS 已在 `WebMvcConfig` 放行
+
+### Q6: Swagger 打开 404？
+
+**A:** 本项目用 Springfox 3.0.0，访问路径是：
+```
+http://localhost:8081/swagger-ui/index.html
+```
+**不是** `/swagger-ui.html`（Springfox 2.x 旧路径，3.x 已废弃）。
+> 注：`start-all.bat` 启动提示中打印的是 `/swagger-ui.html`（历史遗留），正确路径见上。
+
+### Q7: 如何重置 admin 密码？
+
+**A:**
+- 默认账号：`admin / <INITIAL_PASSWORD>`（启动脚本 / `.env.example` 提示，**首次登录后请立即修改**）
+- 用初始账号登录后改密码，或直接 SQL：
+  ```sql
+  -- 用 BCrypt 在线工具生成新密码哈希后更新
+  UPDATE user SET password='<BCRYPT_HASH_OF_NEW_PASSWORD>' WHERE username='admin';
+  ```
+- **务必把 `<INITIAL_PASSWORD>` 和 `<BCRYPT_HASH_OF_NEW_PASSWORD>` 替换为实际值后再执行**
+
+### Q8: 图片上传失败？
+
+**A:**
+1. `data/uploads/` 目录存在且有写权限
+2. 单文件 ≤ 10MB（`application.yml` 中 `upload.max-size`）
 3. 支持格式：JPEG, PNG, GIF, WebP
+4. 系统自动用 Thumbnailator 压缩到 1920×1920
 
-### Q7: Swagger 无法访问？
+### Q9: 日志全是乱码？
 
-**A:**
-1. 确认已添加 Swagger 依赖（pom.xml）
-2. 检查 Security 配置是否放行了 swagger 路径
-3. 访问地址：`http://localhost:8081/swagger-ui.html`
+**A:** Windows 下 `start-all.bat` 默认 `chcp 936` (GBK)，但项目文件是 UTF-8。改 bat 第一行 `chcp 65001` 即可。详见 [`start-all.bat`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/start-all.bat)。
 
-### Q8: 如何切换到生产环境？
+### Q10: 如何切到生产环境？
 
 **A:**
-1. 修改 `.env.production` 中的 API 地址
-2. 前端执行 `npm run build` 打包
-3. 将 `dist` 目录部署到 Nginx
-4. 后端修改 `application.yml` 中的生产环境配置
+1. 后端打包：`mvn clean package -DskipTests`，丢给 Docker / 服务器
+2. 前端：`npm run build`，产物 `dist/` 部署到 Nginx
+3. 修改 `application.yml` 中的生产配置（数据库、Redis、AI Key）
+4. 配 HTTPS 证书（小程序强制要求）
+
+---
+
+## 📚 相关文档
+
+| 文档 | 用途 |
+|---|---|
+| [`答辩准备.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/%E7%AD%94%E8%BE%A9%E5%87%86%E5%A4%87.md) | 毕业答辩 Q&A（113 个高频问题 + 10 大流程图 + 7 大数据流追踪） |
+| [`docs/PERFORMANCE_REPORT.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/PERFORMANCE_REPORT.md) | 性能压测报告（JMeter） |
+| [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/RAG_TECHNICAL_DOCUMENTATION.md) | RAG 技术详解 |
+| [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md) | 系统优化说明 |
+| [`docs/usecase-*.svg`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/) | 5 个用例图（订单/商品/用户/AI/售后） |
 
 ---
 
 ## 🤝 贡献指南
 
-我们欢迎所有形式的贡献！无论是新功能、Bug 修复、文档改进还是问题反馈。
-
-### 如何贡献
-
 1. **Fork** 本仓库
 2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+3. 提交更改 (`git commit -m 'feat: 添加 xxx 功能'`)
 4. 推送到分支 (`git push origin feature/AmazingFeature`)
 5. 开启 **Pull Request**
 
 ### 贡献类型
 
-- 🐛 **Bug 报告**：通过 Issues 提交详细的问题描述和复现步骤
-- 💡 **功能建议**：提出新功能想法并说明使用场景
-- 📝 **文档改进**：修正错误、补充说明、翻译文档
-- ✨ **代码贡献**：实现新功能或修复已知问题
-- 🎨 **UI 优化**：改进界面设计和用户体验
-
-### 开发流程
-
-1. 先讨论大范围改动（通过 Issue）
-2. 遵循现有代码风格
-3. 确保所有测试通过
-4. 更新相关文档
-5. 提交清晰的 PR 描述
+- 🐛 Bug 报告（Issues 附复现步骤）
+- 💡 功能建议（说明使用场景）
+- 📝 文档改进
+- ✨ 代码贡献
+- 🎨 UI 优化
 
 ---
 
 ## 📄 许可证
 
-本项目采用 **MIT License** 开源许可证。
+本项目采用 **MIT License** 开源。
 
 ```
 MIT License
@@ -828,79 +1163,49 @@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 ```
-
----
-
-## 📞 联系方式
-
-- **项目仓库**：<GitHub Repository URL>
-- **问题反馈**：[Issues](../../issues)
-- **讨论交流**：[Discussions](../../discussions)
-- **邮箱**：contact@example.com
 
 ---
 
 ## 🙏 致谢
 
-感谢以下开源项目和社区：
-
-- [Spring](https://spring.io/) - 企业级 Java 开发框架
+- [Spring](https://spring.io/) - 企业级 Java 框架
 - [Vue.js](https://vuejs.org/) - 渐进式 JavaScript 框架
-- [Element Plus](https://element-plus.org/) - 基于 Vue 3 的组件库
-- [MyBatis-Plus](https://baomidou.com/) - 强大的 MyBatis 增强工具
-- [MySQL](https://www.mysql.com/) - 开源关系型数据库
-- [Redis](https://redis.io/) - 高性能内存数据库
-- [ECharts](https://echarts.apache.org/) - 数据可视化图表库
-- [DeepSeek](https://platform.deepseek.com/) - AI 大模型服务
+- [Element Plus](https://element-plus.org/) - Vue 3 组件库
+- [MyBatis-Plus](https://baomidou.com/) - MyBatis 增强
+- [DeepSeek](https://platform.deepseek.com/) - AI 大模型
+- [ECharts](https://echarts.apache.org/) - 数据可视化
 
 ---
 
-## 📈 项目路线图
+## 📈 路线图
 
-### ✅ 已完成功能
-- [x] 用户认证与权限系统
-- [x] 商品管理与分类
-- [x] 购物车与订单系统
-- [x] 在线支付集成
-- [x] 客服聊天系统（AI + 人工）
-- [x] 售后服务模块
-- [x] 优惠券与促销活动
-- [x] 多端适配（Web + 小程序）
-- [x] 管理后台完整功能
-- [x] 商家管理端
+### ✅ 已完成
+- [x] 完整电商核心（商品/订单/支付/售后/营销）
+- [x] 多端（Web × 3 + 小程序 + 共享 UI）
+- [x] AI 客服 + RAG 知识库
+- [x] STOMP 实时聊天（3 角色）
+- [x] RBAC 权限
+- [x] 可观测性（Actuator + Prometheus + TraceId）
+- [x] 一键启动脚本
 
-### 🚧 开发中功能
-- [ ] 物流追踪对接
-- [ ] 数据分析报表增强
-- [ ] 消息推送通知
-- [ ] 商品评价系统优化
-
-### 🎯 未来规划
-- [ ] 移动 App（React Native/Flutter）
-- [ ] 多语言国际化支持
-- [ ] 分布式微服务架构升级
-- [ ] 区块链溯源功能
-- [ ] 直播带货功能
-- [ ] 社交电商功能
+### 🚧 计划中
+- [ ] 分布式微服务（Spring Cloud）
+- [ ] 物流真实 API 对接
+- [ ] 直播带货
+- [ ] 区块链溯源
+- [ ] 多语言国际化
 
 ---
 
 <div align="center">
 
-**⭐ 如果这个项目对您有帮助，请给一个 Star！⭐**
+**⭐ 如果这个项目对你有帮助，请给一个 Star！⭐**
 
- Made with ❤️ by 乡村振兴团队
+Made with ❤️ by 乡村振兴团队
 
 </div>
-
