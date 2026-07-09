@@ -31,6 +31,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @Service
 public class AIService {
     private static final Logger logger = LoggerFactory.getLogger(AIService.class);
+    /** ObjectMapper 线程安全，全局复用，避免重复创建开销 */
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /** AI 服务日志 Mapper */
     private final AIServiceLogMapper aiServiceLogMapper;
@@ -50,7 +52,29 @@ public class AIService {
     private final DiscountActivityService discountActivityService;
     /** HTTP 客户端 */
     private final RestTemplate restTemplate;
-    
+
+    /** RAG 检索增强生成服务（通过 @Autowired 注入，避免修改构造函数） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private RagService ragService;
+    /** 多轮对话管理服务 */
+    @org.springframework.beans.factory.annotation.Autowired
+    private ConversationService conversationService;
+    /** 意图识别服务（问题7：动态路由） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private IntentClassifierService intentClassifierService;
+    /** 敏感信息过滤服务（问题3：内容安全） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContentFilterService contentFilterService;
+    /** 商品上下文优化器（问题6：上下文控制） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private ProductContextOptimizer productContextOptimizer;
+    /** RAG 监控服务（问题5：可观测性） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private RagMonitorService ragMonitorService;
+    /** 种子FAQ初始化器（问题4：冷启动） */
+    @org.springframework.beans.factory.annotation.Autowired
+    private SeedFAQInitializer seedFAQInitializer;
+
     private final Map<String, String> queryCache = new java.util.concurrent.ConcurrentHashMap<>();
     private final ExecutorService executor = Executors.newCachedThreadPool();
 
@@ -180,19 +204,54 @@ public class AIService {
      * @param serviceType 服务类型：1-商品咨询 2-订单咨询 3-其他（可空，默认 1）
      * @return 包含 AI 回答、推荐商品、调试信息的 Map
      */
-    @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> handleQuery(Long userId, String query, Integer serviceType) {
+        long startTime = System.currentTimeMillis();
         try {
-            if (serviceType == null || serviceType < 1 || serviceType > 3) {
-                serviceType = 1;
-            }
-
             if (query == null || query.trim().isEmpty()) {
                 query = "推荐一些农产品";
             }
 
-            logger.debug("Original query: '{}'", query);
-            
+            // ===== 问题7：意图识别与动态路由 =====
+            IntentClassifierService.ClassificationResult intentResult = null;
+            if (intentClassifierService != null) {
+                try {
+                    intentResult = intentClassifierService.classify(query);
+                    // 意图识别覆盖 serviceType（仅当未显式指定时）
+                    if (serviceType == null) {
+                        serviceType = intentClassifierService.getServiceType(intentResult.intent);
+                    }
+                    // 记录意图到监控
+                    if (ragMonitorService != null) {
+                        ragMonitorService.recordIntent(intentResult.intent.name());
+                        ragMonitorService.recordQuery(query);
+                    }
+                    logger.info("[意图识别] query='{}', intent={}, confidence={}",
+                            query, intentResult.intent.label,
+                            String.format("%.4f", intentResult.confidence));
+                } catch (Exception e) {
+                    logger.warn("意图识别失败，使用默认 serviceType: {}", e.getMessage());
+                }
+            }
+
+            if (serviceType == null || serviceType < 1 || serviceType > 3) {
+                serviceType = 1;
+            }
+
+            // ===== 问题3：敏感信息过滤（对用户查询） =====
+            String filteredQuery = query;
+            if (contentFilterService != null) {
+                try {
+                    filteredQuery = contentFilterService.filterUserQuery(query);
+                    if (!filteredQuery.equals(query)) {
+                        logger.info("[内容过滤] 用户查询包含敏感信息，已过滤");
+                    }
+                } catch (Exception e) {
+                    logger.warn("查询过滤失败，使用原始查询: {}", e.getMessage());
+                }
+            }
+
+            logger.debug("Original query: '{}', filtered: '{}'", query, filteredQuery);
+
             List<Product> allProducts = null;
             try {
                 allProducts = productService.listAll();
@@ -201,52 +260,71 @@ public class AIService {
                 allProducts = new ArrayList<>();
             }
             logger.debug("Total products from database: {}", allProducts != null ? allProducts.size() : 0);
-            
-            List<Product> limitedProducts = filterProductsByQuery(allProducts, query);
-            
+
+            List<Product> limitedProducts = filterProductsByQuery(allProducts, filteredQuery);
+
             logger.debug("Products for context: {}", limitedProducts != null ? limitedProducts.size() : 0);
-            
-            String productContext = buildProductContext(limitedProducts);
-            logger.debug("Product context length: {}", productContext.length());
-            if (productContext.length() > 1000) {
-                logger.debug("Product context sample (first 1000 chars): {}", productContext.substring(0, 1000));
+
+            // ===== 问题6：商品上下文优化（相关性排序 + Token 预算控制） =====
+            String productContext;
+            if (productContextOptimizer != null) {
+                try {
+                    List<Product> ranked = productContextOptimizer.rankAndSelect(limitedProducts, filteredQuery);
+                    productContext = productContextOptimizer.buildOptimizedContext(ranked);
+                    // ===== 问题3：对商品上下文进行敏感信息过滤 =====
+                    if (contentFilterService != null) {
+                        productContext = contentFilterService.filterProductContext(productContext);
+                    }
+                } catch (Exception e) {
+                    logger.warn("商品上下文优化失败，降级为原始方法: {}", e.getMessage());
+                    productContext = buildProductContext(limitedProducts);
+                }
             } else {
-                logger.debug("Full product context: {}", productContext);
+                productContext = buildProductContext(limitedProducts);
             }
+            logger.debug("Product context length: {}", productContext.length());
 
             String response = null;
+            long llmStart = System.currentTimeMillis();
+            boolean llmSuccess = false;
             try {
                 logger.debug("尝试使用DeepSeek API生成回复...");
-                response = callDeepSeekAPI(query, serviceType, productContext);
+                response = callDeepSeekAPI(filteredQuery, serviceType, productContext);
+                llmSuccess = true;
                 logger.debug("DeepSeek API调用成功，生成回复: {}...", response.substring(0, Math.min(100, response.length())));
             } catch (Exception e) {
                 logger.warn("DeepSeek API调用失败: {}", e.getMessage());
                 try {
                     logger.debug("尝试使用本地模拟回复...");
-                    response = generateAIResponseWithUser(query, serviceType, userId);
+                    response = generateAIResponseWithUser(filteredQuery, serviceType, userId);
+                    llmSuccess = true;
                     logger.debug("本地回复生成成功: {}", response);
                 } catch (Exception ex) {
                     logger.warn("本地回复生成也失败: {}", ex.getMessage());
-                    response = defaultResponse(query);
+                    response = defaultResponse(filteredQuery);
                     logger.debug("使用默认回复: {}", response);
                 }
+            } finally {
+                // ===== 问题5：监控埋点 =====
+                if (ragMonitorService != null) {
+                    long llmDuration = System.currentTimeMillis() - llmStart;
+                    ragMonitorService.recordLlmCall(llmDuration, llmSuccess);
+                }
             }
-            
+
             // 将新的查询结果存入缓存
             if (response != null) {
                 queryCache.put(query, response);
-                
+
                 // 控制缓存大小，避免内存溢出
                 if (queryCache.size() > 100) {
-                    // 简单实现：移除最早的50个缓存项
                     List<String> keys = new ArrayList<>(queryCache.keySet());
                     for (int i = 0; i < 50 && i < keys.size(); i++) {
                         queryCache.remove(keys.get(i));
                     }
                 }
             } else {
-                // 最后的防线，确保有响应返回
-                response = defaultResponse(query);
+                response = defaultResponse(filteredQuery);
             }
 
             // 记录服务日志
@@ -261,6 +339,12 @@ public class AIService {
             Map<String, Object> result = new HashMap<>();
             result.put("response", response);
             result.put("logId", log.getId());
+            result.put("responseTimeMs", System.currentTimeMillis() - startTime);
+            if (intentResult != null) {
+                result.put("intent", intentResult.intent.name());
+                result.put("intentLabel", intentResult.intent.label);
+                result.put("intentConfidence", Math.round(intentResult.confidence * 10000) / 10000.0);
+            }
             return result;
         } catch (Exception e) {
             logger.error("处理AI查询失败: {}", e.getMessage(), e);
@@ -275,10 +359,11 @@ public class AIService {
             } catch (Exception ex) {
                 logger.error("记录服务日志失败: {}", ex.getMessage(), ex);
             }
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("response", "抱歉，暂时无法回答您的问题，请稍后重试");
             result.put("logId", log.getId());
+            result.put("responseTimeMs", System.currentTimeMillis() - startTime);
             return result;
         }
     }
@@ -343,7 +428,7 @@ public class AIService {
 
                 requestBody.put("messages", messages);
 
-                String requestJson = new ObjectMapper().writeValueAsString(requestBody);
+                String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
                 logger.info("请求DeepSeek API: URL={}, model={}", deepSeekConfig.getApiUrl(), deepSeekConfig.getModel());
 
                 org.apache.http.client.methods.HttpPost httpPost =
@@ -386,7 +471,7 @@ public class AIService {
                         if (line.startsWith("data: ") && !line.equals("data: [DONE]")) {
                             String jsonData = line.substring(6);
                             try {
-                                JsonNode node = new ObjectMapper().readTree(jsonData);
+                                JsonNode node = OBJECT_MAPPER.readTree(jsonData);
                                 JsonNode choices = node.get("choices");
                                 if (choices != null && choices.isArray() && choices.size() > 0) {
                                     JsonNode delta = choices.get(0).get("delta");
@@ -1008,7 +1093,7 @@ public class AIService {
         ResponseEntity<String> responseEntity = restTemplate.postForEntity(
                 deepSeekConfig.getApiUrl(), requestEntity, String.class);
         
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = OBJECT_MAPPER;
         JsonNode rootNode = mapper.readTree(responseEntity.getBody());
         JsonNode choicesNode = rootNode.get("choices");
         if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
@@ -1262,6 +1347,587 @@ public class AIService {
     // 默认回复
     private String defaultResponse(String query) {
         return "感谢您的咨询！我是乡村振兴农产品销售平台的AI助手，很高兴为您服务。您可以咨询农产品相关信息，比如蔬菜、水果、粮油等优质农产品。也可以查询订单和物流，随时了解您的订单状态和物流信息。如果您有售后服务方面的问题，比如退款、退换货、投诉等，我也可以为您解答。另外，我还可以为您介绍助农活动，比如直播带货、采摘体验、展销会等。农业技术方面，比如种植、养殖、病虫害防治等技术咨询，我也能提供帮助。您还可以了解最新的农产品价格和市场趋势，以及账号管理相关的问题，比如注册、登录、密码重置等。请告诉我您的具体需求，我会为您提供专业的帮助。";
+    }
+
+    // ==================== RAG 检索增强生成方法 ====================
+
+    /**
+     * RAG 增强查询（非流式）。
+     * <p>
+     * 完整 RAG 管道流程：
+     * <ol>
+     *   <li>多轮对话会话管理（创建/恢复）</li>
+     *   <li>RAG 检索：查询向量化 → 知识库检索 → 组装上下文</li>
+     *   <li>RAG 增强：构建增强系统提示词（知识上下文 + 对话历史）</li>
+     *   <li>LLM 生成：调用 DeepSeek API 生成回答</li>
+     *   <li>溯源记录：保存知识来源与检索元数据</li>
+     * </ol>
+     * </p>
+     *
+     * @param userId       用户 ID
+     * @param query        用户查询
+     * @param serviceType  服务类型
+     * @param sessionToken 会话令牌（多轮对话，可空）
+     * @return 包含回答、知识来源、检索信息的 Map
+     */
+    public Map<String, Object> handleRagQuery(Long userId, String query, Integer serviceType, String sessionToken) {
+        long startTime = System.currentTimeMillis();
+        Map<String, Object> result = new HashMap<>();
+
+        try {
+            if (query == null || query.trim().isEmpty()) query = "推荐一些农产品";
+
+            // ===== 问题7：意图识别与动态路由 =====
+            IntentClassifierService.ClassificationResult intentResult = null;
+            if (intentClassifierService != null) {
+                try {
+                    intentResult = intentClassifierService.classify(query);
+                    if (serviceType == null) {
+                        serviceType = intentClassifierService.getServiceType(intentResult.intent);
+                    }
+                    if (ragMonitorService != null) {
+                        ragMonitorService.recordIntent(intentResult.intent.name());
+                        ragMonitorService.recordQuery(query);
+                    }
+                    result.put("intent", intentResult.intent.name());
+                    result.put("intentLabel", intentResult.intent.label);
+                    result.put("intentConfidence", Math.round(intentResult.confidence * 10000) / 10000.0);
+                } catch (Exception e) {
+                    logger.warn("意图识别失败: {}", e.getMessage());
+                }
+            }
+
+            if (serviceType == null || serviceType < 1 || serviceType > 3) serviceType = 1;
+
+            // ===== 问题3：敏感信息过滤 =====
+            String filteredQuery = query;
+            if (contentFilterService != null) {
+                try {
+                    filteredQuery = contentFilterService.filterUserQuery(query);
+                } catch (Exception e) {
+                    logger.warn("查询过滤失败: {}", e.getMessage());
+                }
+            }
+
+            // ===== 问题4：多级查询匹配（精确匹配 → 向量检索 → LLM） =====
+            int matchLevel = 3;
+            if (seedFAQInitializer != null) {
+                try {
+                    matchLevel = seedFAQInitializer.getMatchLevel(filteredQuery);
+                    result.put("matchLevel", matchLevel);
+                } catch (Exception e) {
+                    logger.debug("匹配级别检测失败: {}", e.getMessage());
+                }
+            }
+
+            // 1. 多轮对话会话管理
+            com.example.minimall.model.ConversationSession session = null;
+            String conversationContext = null;
+            if (ragService.isRagEnabled() && conversationService != null) {
+                session = conversationService.getOrCreateSession(sessionToken, userId, serviceType);
+                conversationService.addUserMessage(session.getId(), query);
+                conversationContext = conversationService.buildConversationContext(session.getId());
+                result.put("sessionToken", session.getSessionToken());
+            }
+
+            // 2. 商品上下文（问题6：使用优化器进行相关性排序+Token控制）
+            List<Product> allProducts = null;
+            try {
+                allProducts = productService.listAll();
+            } catch (Exception e) {
+                allProducts = new ArrayList<>();
+            }
+            List<Product> limitedProducts = filterProductsByQuery(allProducts, filteredQuery);
+            String productContext;
+            if (productContextOptimizer != null) {
+                try {
+                    List<Product> ranked = productContextOptimizer.rankAndSelect(limitedProducts, filteredQuery);
+                    productContext = productContextOptimizer.buildOptimizedContext(ranked);
+                    if (contentFilterService != null) {
+                        productContext = contentFilterService.filterProductContext(productContext);
+                    }
+                } catch (Exception e) {
+                    logger.warn("商品上下文优化失败，降级: {}", e.getMessage());
+                    productContext = buildProductContext(limitedProducts);
+                }
+            } else {
+                productContext = buildProductContext(limitedProducts);
+            }
+
+            // 3. RAG 检索
+            RagService.RetrievalResult retrievalResult = null;
+            String ragContext = null;
+            if (ragService.isRagEnabled()) {
+                long retrievalStart = System.currentTimeMillis();
+                retrievalResult = ragService.retrieve(filteredQuery);
+                long retrievalDuration = System.currentTimeMillis() - retrievalStart;
+                ragContext = retrievalResult.contextText;
+                result.put("retrievalScore", retrievalResult.topScore);
+                result.put("retrievalTimeMs", retrievalResult.retrievalTimeMs);
+                result.put("sources", retrievalResult.sources);
+                result.put("sourceCount", retrievalResult.sources.size());
+                logger.info("[RAG查询] 检索完成: score={}, time={}ms, sources={}",
+                        retrievalResult.topScore, retrievalResult.retrievalTimeMs,
+                        retrievalResult.sources.size());
+
+                // ===== 问题5：监控埋点 =====
+                if (ragMonitorService != null) {
+                    ragMonitorService.recordRetrieval(retrievalDuration);
+                    // 检索命中/未命中
+                    boolean hit = !retrievalResult.chunks.isEmpty() || !retrievalResult.faqs.isEmpty();
+                    ragMonitorService.recordRagResult(hit);
+                }
+            }
+
+            // 4. 构建增强系统提示词
+            String systemPrompt;
+            if (ragService.isRagEnabled() && ragContext != null) {
+                systemPrompt = ragService.buildRagSystemPrompt(serviceType, productContext, ragContext, conversationContext);
+            } else {
+                systemPrompt = buildSystemPrompt(serviceType, productContext);
+            }
+
+            // 5. 调用 DeepSeek API
+            String response;
+            long llmStart = System.currentTimeMillis();
+            boolean llmSuccess = false;
+            try {
+                response = callDeepSeekAPIWithPrompt(filteredQuery, systemPrompt);
+                llmSuccess = true;
+            } catch (Exception e) {
+                logger.warn("DeepSeek API调用失败，使用本地回复: {}", e.getMessage());
+                try {
+                    response = generateAIResponseWithUser(filteredQuery, serviceType, userId);
+                    llmSuccess = true;
+                } catch (Exception ex) {
+                    response = defaultResponse(filteredQuery);
+                }
+            } finally {
+                if (ragMonitorService != null) {
+                    ragMonitorService.recordLlmCall(System.currentTimeMillis() - llmStart, llmSuccess);
+                }
+            }
+            if (response == null || response.isEmpty()) {
+                response = defaultResponse(filteredQuery);
+            }
+
+            long responseTime = System.currentTimeMillis() - startTime;
+
+            // 6. 记录对话消息（含溯源信息）
+            if (session != null) {
+                String sourcesJson = retrievalResult != null ? ragService.serializeRetrievalResult(retrievalResult) : null;
+                conversationService.addAssistantMessage(session.getId(), response, sourcesJson,
+                        null, null,
+                        retrievalResult != null ? java.math.BigDecimal.valueOf(retrievalResult.topScore) : null,
+                        (int) responseTime);
+            }
+
+            // 7. 记录 AI 服务日志
+            AIServiceLog log = new AIServiceLog();
+            log.setUserId(userId != null && userId != 0L ? userId : null);
+            log.setQuery(query);
+            log.setResponse(response);
+            log.setServiceType(serviceType);
+            log.setCreatedAt(LocalDateTime.now());
+            aiServiceLogMapper.insert(log);
+
+            result.put("response", response);
+            result.put("logId", log.getId());
+            result.put("responseTimeMs", responseTime);
+            result.put("ragEnabled", ragService.isRagEnabled());
+
+            // 商品卡片（serviceType=1 时）
+            if (serviceType == 1) {
+                List<Map<String, Object>> productCards = buildProductCards(
+                        getRelatedProducts(filteredQuery, response), response);
+                if (!productCards.isEmpty()) {
+                    result.put("productCards", productCards);
+                }
+            }
+
+            return result;
+        } catch (Exception e) {
+            logger.error("RAG查询处理失败: {}", e.getMessage(), e);
+            result.put("response", "抱歉，暂时无法回答您的问题，请稍后重试");
+            result.put("ragEnabled", ragService.isRagEnabled());
+            result.put("responseTimeMs", System.currentTimeMillis() - startTime);
+            return result;
+        }
+    }
+
+    /**
+     * RAG 增强查询（SSE 流式输出）。
+     * <p>
+     * 与 handleRagQuery 流程一致，但通过 SseEmitter 实时推送：
+     * 1. 先推送检索事件（知识来源信息）
+     * 2. 流式推送生成的 token
+     * 3. 推送完成事件（含来源、商品卡片等）
+     * </p>
+     */
+    public SseEmitter handleRagQueryStream(Long userId, String query, Integer serviceType, String sessionToken) {
+        SseEmitter emitter = new SseEmitter(120000L);
+
+        // 注册超时/错误回调，确保客户端断开时及时清理
+        emitter.onTimeout(() -> {
+            logger.warn("[RAG流式] 客户端超时断开");
+            emitter.complete();
+        });
+        emitter.onError(e -> {
+            logger.warn("[RAG流式] 客户端异常断开: {}", e.getMessage());
+            emitter.complete();
+        });
+
+        if (query == null || query.trim().isEmpty()) query = "推荐一些农产品";
+
+        // ===== 问题7：意图识别与动态路由 =====
+        IntentClassifierService.ClassificationResult intentResult = null;
+        if (intentClassifierService != null) {
+            try {
+                intentResult = intentClassifierService.classify(query);
+                if (serviceType == null) {
+                    serviceType = intentClassifierService.getServiceType(intentResult.intent);
+                }
+                if (ragMonitorService != null) {
+                    ragMonitorService.recordIntent(intentResult.intent.name());
+                    ragMonitorService.recordQuery(query);
+                }
+            } catch (Exception e) {
+                logger.warn("[RAG流式] 意图识别失败: {}", e.getMessage());
+            }
+        }
+
+        if (serviceType == null || serviceType < 1 || serviceType > 3) serviceType = 1;
+
+        // ===== 问题3：敏感信息过滤 =====
+        String filteredQuery = query;
+        if (contentFilterService != null) {
+            try {
+                filteredQuery = contentFilterService.filterUserQuery(query);
+            } catch (Exception e) {
+                logger.warn("[RAG流式] 查询过滤失败: {}", e.getMessage());
+            }
+        }
+
+        final Integer finalServiceType = serviceType;
+        final String finalQuery = filteredQuery;
+        final String originalQuery = query;
+        final Long finalUserId = userId;
+        final IntentClassifierService.Intent finalIntent = intentResult != null ? intentResult.intent : null;
+
+        executor.execute(() -> {
+            long startTime = System.currentTimeMillis();
+            StringBuilder fullResponse = new StringBuilder();
+            try {
+                logger.info("[RAG流式] 开始处理, query={}, filtered={}, serviceType={}, intent={}",
+                        originalQuery, finalQuery, finalServiceType,
+                        finalIntent != null ? finalIntent.label : "unknown");
+
+                // 1. 多轮对话会话
+                com.example.minimall.model.ConversationSession session = null;
+                String conversationContext = null;
+                if (ragService.isRagEnabled() && conversationService != null) {
+                    session = conversationService.getOrCreateSession(sessionToken, finalUserId, finalServiceType);
+                    conversationService.addUserMessage(session.getId(), originalQuery);
+                    conversationContext = conversationService.buildConversationContext(session.getId());
+                }
+
+                // 2. 商品上下文（问题6：使用优化器）
+                List<Product> allProducts;
+                try {
+                    allProducts = productService.listAll();
+                } catch (Exception e) {
+                    logger.warn("[RAG流式] 加载商品列表失败: {}", e.getMessage());
+                    allProducts = new ArrayList<>();
+                }
+                if (allProducts == null) allProducts = new ArrayList<>();
+                List<Product> limitedProducts = filterProductsByQuery(allProducts, finalQuery);
+                String productContext;
+                if (productContextOptimizer != null) {
+                    try {
+                        List<Product> ranked = productContextOptimizer.rankAndSelect(limitedProducts, finalQuery);
+                        productContext = productContextOptimizer.buildOptimizedContext(ranked);
+                        if (contentFilterService != null) {
+                            productContext = contentFilterService.filterProductContext(productContext);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("[RAG流式] 商品上下文优化失败，降级: {}", e.getMessage());
+                        productContext = buildProductContext(limitedProducts);
+                    }
+                } else {
+                    productContext = buildProductContext(limitedProducts);
+                }
+
+                // 3. RAG 检索
+                RagService.RetrievalResult retrievalResult = null;
+                String ragContext = null;
+                if (ragService.isRagEnabled()) {
+                    long retrievalStart = System.currentTimeMillis();
+                    retrievalResult = ragService.retrieve(finalQuery);
+                    long retrievalDuration = System.currentTimeMillis() - retrievalStart;
+                    ragContext = retrievalResult.contextText;
+
+                    // ===== 问题5：监控埋点 =====
+                    if (ragMonitorService != null) {
+                        ragMonitorService.recordRetrieval(retrievalDuration);
+                        boolean hit = !retrievalResult.chunks.isEmpty() || !retrievalResult.faqs.isEmpty();
+                        ragMonitorService.recordRagResult(hit);
+                    }
+
+                    // 推送检索事件（前端可展示知识来源）
+                    Map<String, Object> retrievalEvent = new HashMap<>();
+                    retrievalEvent.put("sources", retrievalResult.sources);
+                    retrievalEvent.put("topScore", retrievalResult.topScore);
+                    retrievalEvent.put("retrievalTimeMs", retrievalResult.retrievalTimeMs);
+                    retrievalEvent.put("sourceCount", retrievalResult.sources.size());
+                    if (finalIntent != null) {
+                        retrievalEvent.put("intent", finalIntent.name());
+                        retrievalEvent.put("intentLabel", finalIntent.label);
+                    }
+                    if (session != null) {
+                        retrievalEvent.put("sessionToken", session.getSessionToken());
+                    }
+                    emitter.send(SseEmitter.event().name("retrieval").data(retrievalEvent));
+                    logger.info("[RAG流式] 推送检索事件: {} 个来源", retrievalResult.sources.size());
+                }
+
+                // 4. 构建增强提示词
+                String systemPrompt;
+                if (ragContext != null) {
+                    systemPrompt = ragService.buildRagSystemPrompt(finalServiceType, productContext, ragContext, conversationContext);
+                } else {
+                    systemPrompt = buildSystemPrompt(finalServiceType, productContext);
+                }
+
+                // 5. 流式调用 DeepSeek API
+                Map<String, Object> requestBody = new HashMap<>();
+                requestBody.put("model", deepSeekConfig.getModel());
+                requestBody.put("temperature", deepSeekConfig.getTemperature());
+                requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
+                requestBody.put("stream", true);
+
+                Map<String, String> thinking = new HashMap<>();
+                thinking.put("type", "disabled");
+                requestBody.put("thinking", thinking);
+
+                List<Map<String, String>> messages = new ArrayList<>();
+                Map<String, String> sysMsg = new HashMap<>();
+                sysMsg.put("role", "system");
+                sysMsg.put("content", systemPrompt);
+                messages.add(sysMsg);
+                Map<String, String> userMsg = new HashMap<>();
+                userMsg.put("role", "user");
+                userMsg.put("content", finalQuery);
+                messages.add(userMsg);
+                requestBody.put("messages", messages);
+
+                String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
+                org.apache.http.client.methods.HttpPost httpPost =
+                        new org.apache.http.client.methods.HttpPost(deepSeekConfig.getApiUrl());
+                httpPost.setHeader("Content-Type", "application/json");
+                httpPost.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
+                httpPost.setEntity(new org.apache.http.entity.StringEntity(requestJson, "UTF-8"));
+
+                RequestConfig requestConfig = RequestConfig.custom()
+                        .setConnectTimeout(10000).setSocketTimeout(60000).build();
+
+                try (CloseableHttpClient httpClient = HttpClients.custom()
+                        .setDefaultRequestConfig(requestConfig).build()) {
+                    org.apache.http.HttpResponse response = httpClient.execute(httpPost);
+                    int statusCode = response.getStatusLine().getStatusCode();
+
+                    if (statusCode != 200) {
+                        throw new RuntimeException("DeepSeek API返回错误状态码: " + statusCode);
+                    }
+
+                    // 使用 try-with-resources 确保 reader 在异常时也能正确关闭，避免连接泄漏
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(response.getEntity().getContent(), "UTF-8"))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            if (line.startsWith("data: ") && !line.equals("data: [DONE]")) {
+                                String jsonData = line.substring(6);
+                                try {
+                                    JsonNode node = OBJECT_MAPPER.readTree(jsonData);
+                                    JsonNode choices = node.get("choices");
+                                    if (choices != null && choices.isArray() && choices.size() > 0) {
+                                        JsonNode delta = choices.get(0).get("delta");
+                                        if (delta != null) {
+                                            JsonNode content = delta.get("content");
+                                            if (content != null && content.isTextual()) {
+                                                String token = content.asText();
+                                                fullResponse.append(token);
+                                                Map<String, String> event = new HashMap<>();
+                                                event.put("token", token);
+                                                emitter.send(SseEmitter.event().name("token").data(event));
+                                            }
+                                        }
+                                    }
+                                } catch (Exception e) {
+                                    logger.warn("解析SSE数据失败: {}", e.getMessage());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                String cleanedResponse = fullResponse.toString()
+                        .replaceAll("###+", " ")
+                        .replaceAll("\\*\\*", "")
+                        .replaceAll("__", "")
+                        .replaceAll("(?m)^- ", "")
+                        .replaceAll("(?m)^#+ ", "")
+                        .replaceAll("\\n\\s+\\n", "\\n")
+                        .trim();
+
+                boolean llmSuccess = true;
+                if (cleanedResponse.isEmpty()) {
+                    cleanedResponse = generateAIResponseWithUser(finalQuery, finalServiceType, finalUserId);
+                    llmSuccess = false;
+                }
+
+                // ===== 问题5：LLM 监控埋点 =====
+                if (ragMonitorService != null) {
+                    ragMonitorService.recordLlmCall(System.currentTimeMillis() - startTime, llmSuccess);
+                }
+
+                long responseTime = System.currentTimeMillis() - startTime;
+
+                // 6. 记录对话消息
+                if (session != null) {
+                    String sourcesJson = retrievalResult != null ? ragService.serializeRetrievalResult(retrievalResult) : null;
+                    conversationService.addAssistantMessage(session.getId(), cleanedResponse, sourcesJson,
+                            null, null,
+                            retrievalResult != null ? java.math.BigDecimal.valueOf(retrievalResult.topScore) : null,
+                            (int) responseTime);
+                }
+
+                // 7. 推送完成事件
+                Map<String, Object> doneEvent = new HashMap<>();
+                doneEvent.put("response", cleanedResponse);
+                doneEvent.put("responseTimeMs", responseTime);
+                doneEvent.put("ragEnabled", ragService.isRagEnabled());
+                if (finalIntent != null) {
+                    doneEvent.put("intent", finalIntent.name());
+                    doneEvent.put("intentLabel", finalIntent.label);
+                }
+                if (retrievalResult != null) {
+                    doneEvent.put("sources", retrievalResult.sources);
+                    doneEvent.put("sourceCount", retrievalResult.sources.size());
+                    doneEvent.put("retrievalScore", retrievalResult.topScore);
+                }
+                if (session != null) {
+                    doneEvent.put("sessionToken", session.getSessionToken());
+                }
+
+                if (finalServiceType == 1) {
+                    List<Map<String, Object>> productCards = buildProductCards(
+                            getRelatedProducts(finalQuery, cleanedResponse), cleanedResponse);
+                    if (!productCards.isEmpty()) {
+                        doneEvent.put("productCards", productCards);
+                    }
+                }
+
+                if (isDiscountQuery(finalQuery)) {
+                    List<DiscountActivity> activities = getRelatedActivities();
+                    if (activities != null && !activities.isEmpty()) {
+                        doneEvent.put("activityCards", buildActivityCards(activities));
+                    }
+                }
+
+                emitter.send(SseEmitter.event().name("done").data(doneEvent));
+
+                // 记录 AI 服务日志（记录原始查询，便于审计）
+                AIServiceLog log = new AIServiceLog();
+                log.setUserId(finalUserId != null && finalUserId != 0L ? finalUserId : null);
+                log.setQuery(originalQuery);
+                log.setResponse(cleanedResponse);
+                log.setServiceType(finalServiceType);
+                log.setCreatedAt(LocalDateTime.now());
+                aiServiceLogMapper.insert(log);
+
+                emitter.complete();
+
+            } catch (Exception e) {
+                logger.error("[RAG流式] 处理失败，使用降级回复", e);
+                try {
+                    String fallback = generateAIResponseWithUser(finalQuery, finalServiceType, finalUserId);
+                    if (fallback == null || fallback.isEmpty()) {
+                        fallback = "很抱歉，我暂时无法处理您的请求。您可以尝试重新提问，或联系在线客服获取帮助。";
+                    }
+                    Map<String, Object> doneEvent = new HashMap<>();
+                    doneEvent.put("response", fallback);
+                    doneEvent.put("ragEnabled", false);
+                    doneEvent.put("responseTimeMs", System.currentTimeMillis() - startTime);
+
+                    if (finalServiceType == 1) {
+                        try {
+                            List<Map<String, Object>> productCards = buildProductCards(
+                                    getRelatedProducts(finalQuery, fallback), fallback);
+                            if (!productCards.isEmpty()) doneEvent.put("productCards", productCards);
+                        } catch (Exception ignored) {}
+                    }
+                    emitter.send(SseEmitter.event().name("done").data(doneEvent));
+                    emitter.complete();
+                } catch (Exception ex) {
+                    logger.error("[RAG流式] 降级处理完全失败: {}", ex.getMessage());
+                    try { emitter.complete(); } catch (Exception ignored) {}
+                }
+            }
+        });
+
+        return emitter;
+    }
+
+    /**
+     * 使用指定系统提示词调用 DeepSeek API
+     */
+    private String callDeepSeekAPIWithPrompt(String query, String systemPrompt) throws Exception {
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", deepSeekConfig.getModel());
+        requestBody.put("temperature", deepSeekConfig.getTemperature());
+        requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
+
+        List<Map<String, Object>> messages = new ArrayList<>();
+        Map<String, Object> systemMessage = new HashMap<>();
+        systemMessage.put("role", "system");
+        systemMessage.put("content", systemPrompt);
+        messages.add(systemMessage);
+
+        Map<String, Object> userMessage = new HashMap<>();
+        userMessage.put("role", "user");
+        userMessage.put("content", query);
+        messages.add(userMessage);
+
+        requestBody.put("messages", messages);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(deepSeekConfig.getApiKey());
+
+        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<String> responseEntity = restTemplate.postForEntity(
+                deepSeekConfig.getApiUrl(), requestEntity, String.class);
+
+        ObjectMapper mapper = OBJECT_MAPPER;
+        JsonNode rootNode = mapper.readTree(responseEntity.getBody());
+        JsonNode choicesNode = rootNode.get("choices");
+        if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
+            JsonNode messageNode = choicesNode.get(0).get("message");
+            if (messageNode != null) {
+                JsonNode contentNode = messageNode.get("content");
+                if (contentNode != null && contentNode.isTextual()) {
+                    return contentNode.asText()
+                            .replaceAll("###+", " ")
+                            .replaceAll("\\*\\*", "")
+                            .replaceAll("__", "")
+                            .replaceAll("(?m)^- ", "")
+                            .replaceAll("(?m)^#+ ", "")
+                            .replaceAll("\\n\\s+\\n", "\\n")
+                            .trim();
+                }
+            }
+        }
+        return defaultResponse(query);
     }
 
     /**

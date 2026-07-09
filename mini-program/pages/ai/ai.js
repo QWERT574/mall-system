@@ -10,7 +10,9 @@ Page({
     isTyping: false, // AI是否正在输入
     scrollToView: '', // 滚动到指定消息
     messageId: 0, // 消息ID计数器
-    userId: 0 // 当前用户ID
+    userId: 0, // 当前用户ID
+    sessionToken: '', // RAG多轮对话会话令牌
+    ragEnabled: true // 是否启用RAG增强
   },
 
   onLoad() {
@@ -93,29 +95,42 @@ Page({
     this.scrollToBottom();
 
     try {
-      // 调用AI查询接口
-      const aiResponse = await post('/api/ai/query', {
+      // 调用RAG增强查询接口（支持多轮对话与知识来源溯源）
+      const aiResponse = await post('/api/ai/rag-query', {
         query: content,
         serviceType: this.data.activeType,
-        userId: this.data.userId // 使用当前用户ID
+        userId: this.data.userId,
+        sessionToken: this.data.sessionToken || undefined
       });
 
       // 处理AI回复，将商品ID转换为可点击的格式
       let responseContent = aiResponse.response || '抱歉，暂时无法回答您的问题，请稍后重试';
-      
+
+      // 更新会话令牌（多轮对话续接）
+      if (aiResponse.sessionToken) {
+        this.setData({ sessionToken: aiResponse.sessionToken });
+      }
+      if (aiResponse.ragEnabled !== undefined) {
+        this.setData({ ragEnabled: aiResponse.ragEnabled });
+      }
+
       // 生成富文本内容，将商品信息转换为可点击的链接
       const richContent = this.generateRichContent(responseContent);
-      
+
       // 解析出的商品信息列表
       const products = this.parseProductsFromResponse(responseContent);
-      
+
       // 获取后端直接返回的商品卡片列表
       const productCards = (aiResponse.productCards || []).map(card => {
         // 兜底：URL 为空或解析失败时使用默认占位图
         card.coverUrl = resolveImageUrl(card.cover || card.image) || DEFAULT_PRODUCT_IMG;
         return card;
       });
-      
+
+      // 构建知识来源信息（可解释性展示）
+      const sources = this.formatSources(aiResponse.sources || []);
+      const hasSources = sources.length > 0;
+
       // 添加AI回复到消息列表
       const aiMessage = {
         id: `msg_${++this.data.messageId}`,
@@ -126,21 +141,29 @@ Page({
         // 解析出的商品信息列表，用于生成商品卡片
         products: products,
         // 直接使用后端返回的商品卡片，用于显示商品卡片
-        productDetails: productCards
+        productDetails: productCards,
+        // RAG 知识来源与可解释性信息
+        sources: sources,
+        hasSources: hasSources,
+        showSources: false, // 默认折叠，点击展开
+        retrievalScore: aiResponse.retrievalScore != null ? Number(aiResponse.retrievalScore).toFixed(3) : null,
+        sourceCount: aiResponse.sourceCount || 0,
+        responseTimeMs: aiResponse.responseTimeMs || 0,
+        ragEnabled: aiResponse.ragEnabled !== undefined ? aiResponse.ragEnabled : true
       };
-      
+
       // 先添加消息到列表
       messages.push(aiMessage);
       this.setData({
         messages: messages,
         isTyping: false
       });
-      
+
       // 如果后端没有返回productCards，再获取商品详情
       if (products.length > 0 && productCards.length === 0) {
         this.loadProductDetails(products, aiMessage, messages);
       }
-      
+
       // 保存历史消息到缓存，使用用户ID作为缓存键
       const cacheKey = `ai_history_messages_${this.data.userId}`;
       wx.setStorageSync(cacheKey, messages);
@@ -207,7 +230,8 @@ Page({
         if (res.confirm) {
           this.setData({
             messages: [],
-            messageId: 0
+            messageId: 0,
+            sessionToken: '' // 重置会话令牌，开启新的多轮对话
           });
           // 使用用户ID作为缓存键
           const cacheKey = `ai_history_messages_${this.data.userId}`;
@@ -218,6 +242,40 @@ Page({
           });
         }
       }
+    });
+  },
+
+  // 格式化知识来源信息（可解释性展示）
+  formatSources(sources) {
+    if (!sources || !sources.length) return [];
+    return sources.map((src, idx) => {
+      let typeText = '知识文档';
+      let typeIcon = '📄';
+      if (src.type === 'faq' || src.type === 1) {
+        typeText = 'FAQ问答';
+        typeIcon = '❓';
+      } else if (src.type === 'chunk' || src.type === 0) {
+        typeText = '知识文档';
+        typeIcon = '📄';
+      }
+      return {
+        index: idx + 1,
+        type: typeText,
+        typeIcon: typeIcon,
+        title: src.title || src.documentTitle || '未命名',
+        content: src.content || src.snippet || '',
+        score: src.score != null ? Number(src.score).toFixed(3) : '-',
+        category: src.category || ''
+      };
+    });
+  },
+
+  // 切换知识来源展开/折叠
+  toggleSources(e) {
+    const msgIdx = e.currentTarget.dataset.msgidx;
+    const key = `messages[${msgIdx}].showSources`;
+    this.setData({
+      [key]: !this.data.messages[msgIdx].showSources
     });
   },
   

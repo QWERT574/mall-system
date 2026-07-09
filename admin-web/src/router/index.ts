@@ -78,6 +78,12 @@ const routes: RouteRecordRaw[] = [
         name: 'AgentManagement',
         component: () => import('@/views/CustomerService/AgentManagement.vue'),
         meta: { title: '客服管理', icon: 'Service' }
+      },
+      {
+        path: 'knowledge',
+        name: 'Knowledge',
+        component: () => import('@/views/knowledge/index.vue'),
+        meta: { title: '知识库管理', icon: 'Collection' }
       }
     ]
   }

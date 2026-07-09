@@ -101,6 +101,40 @@ deepseek:
   temperature: 0.7
   max-tokens: 2048
 
+# Embedding 向量模型配置（用于RAG检索）
+embedding:
+  # 向量API地址（OpenAI兼容接口），留空则使用本地TF-IDF降级方案
+  api-url: ${EMBEDDING_API_URL:https://api.deepseek.com/embeddings}
+  api-key: ${EMBEDDING_API_KEY:}
+  model: ${EMBEDDING_MODEL:text-embedding-3-small}
+  # 向量维度（需与模型实际输出一致）
+  dimensions: ${EMBEDDING_DIMENSIONS:1536}
+  # 请求超时（毫秒）
+  timeout: 15000
+  # 批量 embedding 单次最大条数
+  batch-size: 32
+
+# RAG 检索增强生成配置
+rag:
+  # 是否启用RAG（关闭则走原有直接调用逻辑）
+  enabled: ${RAG_ENABLED:true}
+  # 文档分块大小（字符数）
+  chunk-size: 500
+  # 分块重叠大小（字符数）
+  chunk-overlap: 100
+  # 检索 top-k 数量
+  top-k: 5
+  # FAQ 检索 top-k
+  faq-top-k: 3
+  # 相似度阈值（cosine，低于此值不纳入上下文）
+  similarity-threshold: 0.65
+  # 对话上下文保留轮数
+  conversation-history-turns: 6
+  # 上下文最大 token 数
+  max-context-tokens: 3000
+  # 是否启用多轮对话
+  multi-turn-enabled: true
+
 # AI 回复配置
 ai:
   reply:

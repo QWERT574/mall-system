@@ -1,7 +1,15 @@
 <view class="ai-container">
   <!-- 顶部标题栏 -->
   <view class="ai-header">
-    <text class="header-title">AI助手</text>
+    <view class="header-row">
+      <text class="header-title">AI助手</text>
+      <view class="header-actions">
+        <view wx:if="{{ ragEnabled }}" class="rag-badge">
+          <text class="rag-badge-text">RAG增强</text>
+        </view>
+        <text class="clear-history-btn" bindtap="clearHistory">清空</text>
+      </view>
+    </view>
     <view class="service-type">
       <text class="service-label">服务类型：</text>
       <view class="type-tabs">
@@ -69,6 +77,30 @@
         <view class="message-content ai-content">
           <rich-text class="message-text" user-select="true" nodes="{{ item.richContent || item.content }}" bindtap="onRichTextTap"></rich-text>
 
+          <!-- 知识来源溯源（可解释性展示） -->
+          <view wx:if="{{ item.hasSources }}" class="sources-section">
+            <view class="sources-header" bindtap="toggleSources" data-msgidx="{{msgIdx}}">
+              <view class="sources-title">
+                <text class="sources-icon">📚</text>
+                <text class="sources-title-text">知识来源 ({{ item.sourceCount }})</text>
+              </view>
+              <view class="sources-meta">
+                <text wx:if="{{ item.retrievalScore }}" class="score-badge">相似度 {{ item.retrievalScore }}</text>
+                <text class="toggle-arrow">{{ item.showSources ? '收起' : '展开' }}</text>
+              </view>
+            </view>
+            <view wx:if="{{ item.showSources }}" class="sources-list">
+              <view wx:for="{{ item.sources }}" wx:key="index" class="source-item">
+                <view class="source-item-header">
+                  <text class="source-type-tag">{{ item.typeIcon }} {{ item.type }}</text>
+                  <text class="source-score">匹配度 {{ item.score }}</text>
+                </view>
+                <text class="source-title" user-select="true">{{ item.title }}</text>
+                <text wx:if="{{ item.content }}" class="source-content" user-select="true">{{ item.content }}</text>
+              </view>
+            </view>
+          </view>
+
           <!-- 商品卡片列表 -->
           <view wx:if="{{ item.productDetails && item.productDetails.length > 0 }}" class="product-cards">
             <view
@@ -95,6 +127,11 @@
                 <text class="product-card-stock" wx:else>现货充足</text>
               </view>
             </view>
+          </view>
+
+          <!-- 响应耗时（可解释性元数据） -->
+          <view wx:if="{{ item.responseTimeMs }}" class="response-meta">
+            <text class="response-time">⚡ {{ item.responseTimeMs }}ms</text>
           </view>
         </view>
       </view>

@@ -502,6 +502,122 @@ CREATE TABLE IF NOT EXISTS system_config (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
 -- ============================================
+-- 2.6 RAG知识库相关表
+-- ============================================
+
+-- 知识文档表（管理原始文档/知识条目）
+CREATE TABLE IF NOT EXISTS knowledge_document (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '文档ID',
+    title VARCHAR(500) NOT NULL COMMENT '文档标题',
+    content LONGTEXT NOT NULL COMMENT '文档原始内容',
+    source_type TINYINT DEFAULT 0 COMMENT '来源类型：0-手动录入 1-FAQ 2-历史对话 3-政策文档 4-商品说明 5-帮助文档',
+    category VARCHAR(100) DEFAULT NULL COMMENT '知识分类（如：售后政策、物流规则、商品百科）',
+    tags VARCHAR(500) DEFAULT NULL COMMENT '标签（逗号分隔）',
+    status TINYINT DEFAULT 0 COMMENT '状态：0-待处理 1-已向量化 2-已启用 3-已禁用',
+    chunk_count INT DEFAULT 0 COMMENT '分块数量',
+    doc_meta VARCHAR(1000) DEFAULT NULL COMMENT '元数据JSON（作者、URL等）',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_status (status),
+    INDEX idx_source_type (source_type),
+    INDEX idx_category (category),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='RAG知识文档表';
+
+-- 知识分块表（文档分块 + 向量存储）
+CREATE TABLE IF NOT EXISTS knowledge_chunk (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分块ID',
+    document_id BIGINT NOT NULL COMMENT '所属文档ID',
+    chunk_index INT NOT NULL COMMENT '分块序号（文档内有序）',
+    content TEXT NOT NULL COMMENT '分块文本内容',
+    embedding MEDIUMBLOB COMMENT '向量嵌入（float数组序列化）',
+    embedding_model VARCHAR(100) DEFAULT NULL COMMENT '生成向量的模型名',
+    embedding_dim INT DEFAULT NULL COMMENT '向量维度',
+    token_count INT DEFAULT NULL COMMENT 'token数量',
+    chunk_meta VARCHAR(1000) DEFAULT NULL COMMENT '分块元数据JSON',
+    score_avg DECIMAL(10,6) DEFAULT NULL COMMENT '平均检索得分（用于质量评估）',
+    hit_count INT DEFAULT 0 COMMENT '被检索命中次数',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (document_id) REFERENCES knowledge_document(id) ON DELETE CASCADE,
+    INDEX idx_document_id (document_id),
+    INDEX idx_hit_count (hit_count)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='知识分块与向量存储表';
+
+-- FAQ问答对表（结构化高频问题）
+CREATE TABLE IF NOT EXISTS knowledge_faq (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT 'FAQ ID',
+    question TEXT NOT NULL COMMENT '问题',
+    answer TEXT NOT NULL COMMENT '标准答案',
+    question_embedding MEDIUMBLOB COMMENT '问题的向量嵌入',
+    category VARCHAR(100) DEFAULT NULL COMMENT 'FAQ分类',
+    keywords VARCHAR(500) DEFAULT NULL COMMENT '关键词（逗号分隔）',
+    priority INT DEFAULT 0 COMMENT '优先级（数字越大越优先）',
+    hit_count INT DEFAULT 0 COMMENT '命中次数',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-禁用 1-启用',
+    embedding_model VARCHAR(100) DEFAULT NULL COMMENT '向量模型',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_category (category),
+    INDEX idx_status (status),
+    INDEX idx_priority (priority),
+    INDEX idx_hit_count (hit_count)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='FAQ结构化问答对表';
+
+-- 对话会话表（多轮对话上下文管理）
+CREATE TABLE IF NOT EXISTS conversation_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '会话ID',
+    session_token VARCHAR(64) NOT NULL UNIQUE COMMENT '会话令牌（前端持有）',
+    user_id BIGINT DEFAULT NULL COMMENT '用户ID',
+    service_type INT DEFAULT 1 COMMENT '服务类型：1-商品咨询 2-物流查询 3-售后咨询',
+    title VARCHAR(255) DEFAULT NULL COMMENT '会话标题（取首条消息摘要）',
+    message_count INT DEFAULT 0 COMMENT '消息总数',
+    context_summary TEXT DEFAULT NULL COMMENT '对话上下文摘要（压缩历史）',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-已关闭 1-活跃',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后活跃时间',
+    INDEX idx_user_id (user_id),
+    INDEX idx_session_token (session_token),
+    INDEX idx_status (status),
+    INDEX idx_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI多轮对话会话表';
+
+-- 对话消息表（记录每轮对话的完整信息，含RAG溯源）
+CREATE TABLE IF NOT EXISTS conversation_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',
+    session_id BIGINT NOT NULL COMMENT '会话ID',
+    role VARCHAR(20) NOT NULL COMMENT '角色：user/assistant/system',
+    content TEXT NOT NULL COMMENT '消息内容',
+    retrieved_chunks TEXT DEFAULT NULL COMMENT '检索到的知识分块JSON（含文档ID、内容、得分）',
+    retrieved_faqs TEXT DEFAULT NULL COMMENT '命中的FAQ JSON',
+    sources TEXT DEFAULT NULL COMMENT '知识来源溯源JSON（用于可解释性展示）',
+    retrieval_score DECIMAL(10,6) DEFAULT NULL COMMENT '检索置信度',
+    response_time_ms INT DEFAULT NULL COMMENT '响应耗时（毫秒）',
+    token_count INT DEFAULT NULL COMMENT 'token数量',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    FOREIGN KEY (session_id) REFERENCES conversation_session(id) ON DELETE CASCADE,
+    INDEX idx_session_id (session_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话消息与溯源表';
+
+-- RAG评估记录表（用于效果对比与质量监控）
+CREATE TABLE IF NOT EXISTS rag_evaluation (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '评估ID',
+    query TEXT NOT NULL COMMENT '测试问题',
+    rag_answer TEXT COMMENT 'RAG增强回答',
+    baseline_answer TEXT COMMENT '基线回答（无RAG）',
+    rag_response_time_ms INT DEFAULT NULL COMMENT 'RAG响应耗时',
+    baseline_response_time_ms INT DEFAULT NULL COMMENT '基线响应耗时',
+    rag_retrieval_time_ms INT DEFAULT NULL COMMENT '检索耗时',
+    rag_source_count INT DEFAULT NULL COMMENT '检索到的来源数',
+    accuracy_score DECIMAL(3,2) DEFAULT NULL COMMENT '准确率评分(0-1)',
+    relevance_score DECIMAL(3,2) DEFAULT NULL COMMENT '相关性评分(0-1)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='RAG效果评估记录表';
+
+-- ============================================
 -- 3. 初始化数据
 -- ============================================
 

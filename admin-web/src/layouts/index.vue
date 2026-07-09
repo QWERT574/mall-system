@@ -111,6 +111,7 @@ const menuRoutes = computed(() => {
     { path: '/seller', meta: { title: '商家审核', icon: 'Shop' }, icon: 'Shop' },
     { path: '/activity', meta: { title: '活动管理', icon: 'Calendar' }, icon: 'Calendar' },
     { path: '/aftersale', meta: { title: '售后管理', icon: 'Service' }, icon: 'Service' },
+    { path: '/knowledge', meta: { title: '知识库管理', icon: 'Collection' }, icon: 'Collection' },
     { path: '/system', meta: { title: '系统设置', icon: 'Setting' }, icon: 'Setting' }
   ]
 })

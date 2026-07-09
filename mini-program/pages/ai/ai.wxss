@@ -434,3 +434,165 @@
   color: #ffffff;
   font-weight: bold;
 }
+
+/* ============ RAG 升级新增样式 ============ */
+
+/* 头部行布局 */
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.header-title {
+  margin-bottom: 0;
+}
+
+/* RAG 增强徽章 */
+.rag-badge {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+}
+
+.rag-badge-text {
+  font-size: 20rpx;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 清空历史按钮 */
+.clear-history-btn {
+  font-size: 24rpx;
+  color: #999999;
+  padding: 4rpx 16rpx;
+}
+
+.clear-history-btn:active {
+  color: #4CAF50;
+}
+
+/* 知识来源区域 */
+.sources-section {
+  margin-top: 16rpx;
+  border-top: 1rpx dashed #e0e0e0;
+  padding-top: 12rpx;
+}
+
+.sources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+}
+
+.sources-title {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.sources-icon {
+  font-size: 24rpx;
+}
+
+.sources-title-text {
+  font-size: 22rpx;
+  color: #667eea;
+  font-weight: 600;
+}
+
+.sources-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+/* 相似度徽章 */
+.score-badge {
+  font-size: 20rpx;
+  color: #764ba2;
+  background-color: #f0e6ff;
+  padding: 2rpx 12rpx;
+  border-radius: 16rpx;
+}
+
+.toggle-arrow {
+  font-size: 22rpx;
+  color: #999999;
+}
+
+/* 知识来源列表 */
+.sources-list {
+  margin-top: 8rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.source-item {
+  background-color: #f8f9ff;
+  border-left: 4rpx solid #667eea;
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+}
+
+.source-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6rpx;
+}
+
+.source-type-tag {
+  font-size: 20rpx;
+  color: #667eea;
+  background-color: #e8e3ff;
+  padding: 2rpx 10rpx;
+  border-radius: 12rpx;
+}
+
+.source-score {
+  font-size: 20rpx;
+  color: #999999;
+}
+
+.source-title {
+  display: block;
+  font-size: 24rpx;
+  color: #333333;
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+
+.source-content {
+  display: block;
+  font-size: 22rpx;
+  color: #666666;
+  line-height: 32rpx;
+  max-height: 120rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* 响应耗时元数据 */
+.response-meta {
+  margin-top: 12rpx;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.response-time {
+  font-size: 20rpx;
+  color: #bbbbbb;
+}
