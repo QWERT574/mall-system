@@ -461,6 +461,9 @@ shared-ui/
 | MySQL | >= 8.0 | 数据库 |
 | Redis | >= 6.0 | 缓存 |
 | 微信开发者工具 | 最新版 | 小程序（可选） |
+| Docker Desktop | >= 4.x（可选） | 想用容器化方案时 |
+
+> 💡 **不想装 MySQL/Redis/JDK？** 直接看 [🐳 Docker 部署](#-docker-部署) 章节，一条命令全起。
 
 ### 1️⃣ 克隆项目
 
@@ -469,7 +472,7 @@ git clone <repository-url>
 cd mall_system_extended
 ```
 
-### 2️⃣ 数据库初始化
+### 2️⃣ 数据库初始化（不用 Docker 时）
 
 后端有 **3 个初始化 SQL + 4 个迁移 SQL**，按顺序执行：
 
@@ -625,7 +628,8 @@ mall_system_extended/
 │   │   └── logback-spring.xml
 │   ├── src/test/                     # 单元 + 集成测试
 │   ├── pom.xml
-│   ├── Dockerfile
+│   ├── Dockerfile                    # 多阶段构建（JDK17 + JRE17 精简镜像）
+│   ├── .dockerignore                 # 构建上下文过滤
 │   ├── api_test.ps1
 │   └── .env.example
 │
@@ -668,9 +672,12 @@ mall_system_extended/
 │   ├── docker-compose.yml
 │   └── init.sh
 │
-├── start-all.bat                     # Windows 一键启动
+├── start-all.bat                     # Windows 一键启动（本地开发）
 ├── stop-all.bat                      # Windows 一键停止
-├── docker-compose.yml                # 根级容器编排（MySQL + Backend）
+├── start-docker.bat                  # Windows Docker 启动
+├── stop-docker.bat                   # Windows Docker 停止
+├── docker-compose.yml                # 根级容器编排（MySQL+Redis+Backend）
+├── .env.example                      # Docker 环境变量模板
 ├── 答辩准备.md                       # 毕业答辩 Q&A（113 个高频问题 + 7 大数据流追踪）
 └── README.md                         # 本文件
 ```
@@ -766,75 +773,144 @@ Content-Type: application/json
 
 ## 🐳 Docker 部署
 
-### 根级 docker-compose（MySQL + Backend）
+### 方案 A：compose 一键起（推荐，本地/CI/演示）
+
+**前置条件**：已安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（含 docker compose）
 
 ```bash
-docker-compose up -d
-# 启动 MySQL 8.0（root 密码、库名从 .env / docker-compose.yml 配置，**不要硬编码**）
-# 与后端服务（注意：compose 中端口映射为 8080:8080，与 application.yml 默认 8081 不一致）
+# 1. 准备 .env（首次）
+cp .env.example .env
+# 编辑 .env，至少改 MYSQL_ROOT_PASSWORD、JWT_SECRET
+
+# 2. 一键启动（后台）
+docker compose up -d
+
+# 3. 查看服务状态
+docker compose ps
+
+# 4. 实时看后端日志
+docker compose logs -f backend
+
+# 5. 停止（保留数据）
+docker compose down
+
+# 6. 停止 + 清数据（重置）
+docker compose down -v
 ```
 
-**compose 中后端服务参数**（`docker-compose.yml`）：
+**Windows 快捷方式**：
 
-| 项 | 值 | 说明 |
-|---|---|---|
-| `image` | `mysql:8.0` | 数据库 |
-| `MYSQL_ROOT_PASSWORD` | `<YOUR_MYSQL_ROOT_PASSWORD>` | 跟 `DB_PASSWORD` 不一致，**需手动同步** |
-| Backend 端口 | `8080:8080` | 与后端默认 8081 不一致，**需手动同步** |
-| Backend 环境变量 | `SPRING_DATASOURCE_URL` 等 | 用了 Spring 原生变量名（不是 `DB_*`） |
+```cmd
+:: cmd 里直接双击或在 cmd 中运行
+start-docker.bat       :: 启动（自动等待健康检查通过）
+stop-docker.bat        :: 停止
+```
 
-> **建议**：本地调试推荐用 `start-all.bat` 直接起后端（端口 8081），docker-compose 适合 CI/生产。
+> ⚠️ **如果用 PowerShell**（不是 cmd），必须加 `.\` 前缀：
+> ```powershell
+> .\start-docker.bat
+> # 或
+> cmd /c start-docker.bat
+> ```
+> 因为 PowerShell 默认不在当前目录查找可执行文件（安全设计）。
 
-### 单独构建后端
+### compose 包含哪些服务
+
+| 服务 | 镜像 | 端口映射 | 数据卷 | 用途 |
+|---|---|---|---|---|
+| `mysql` | `mysql:8.0` | `${MYSQL_PORT:-3306}:3306` | `mysql-data` | 数据库，首次启动自动执行 `init_database.sql` 建表+导数据 |
+| `redis` | `redis:7-alpine` | `${REDIS_PORT:-6379}:6379` | `redis-data` | 缓存/会话/限流 |
+| `backend` | 本地 `Dockerfile` 构建 | `${SERVER_PORT:-8081}:8081` | `backend-uploads` / `backend-logs` | Spring Boot 后端 |
+
+**关键设计点**：
+
+- ✅ **健康检查链路**：`mysql` 和 `redis` 先 `healthy` → `backend` 才开始启动
+- ✅ **持久化**：4 个命名卷（MySQL/Redis/上传/日志）`down` 不丢数据
+- ✅ **init 脚本自动建库**：`init_database.sql` 挂在 MySQL 的 `docker-entrypoint-initdb.d/`，**仅在首次启动**生效
+- ✅ **网络隔离**：自建 `minimall-net` bridge，容器内用服务名通信（`DB_HOST=mysql` 而不是 IP）
+- ✅ **Spring Profile = `docker`**：可通过此 profile 区分本地和容器内配置
+- ✅ **JVM 调优**：`MaxRAMPercentage=75.0` 让容器自适应内存（不用写死 -Xmx）
+- ✅ **非 root 运行**：容器内用 `app` 用户启动
+
+### 常见操作
+
+```bash
+# 进入后端容器调试
+docker compose exec backend sh
+
+# 用本地 mysql 客户端连容器里的 mysql
+docker compose exec mysql mysql -uroot -p minimall
+
+# 重新构建后端镜像（代码改了之后）
+docker compose build backend && docker compose up -d backend
+
+# 查看资源占用
+docker stats
+
+# 清理悬空镜像（省空间）
+docker image prune -f
+```
+
+### 方案 B：仅构建后端镜像（用宿主 MySQL/Redis）
 
 ```bash
 cd backend
 docker build -t minimall-backend .
-docker run -d -p 8081:8081 \
-  -e DB_HOST=host.docker.internal \
+
+docker run -d --name backend -p 8081:8081 \
+  -e DB_HOST=<YOUR_DB_HOST> \
   -e DB_PASSWORD=<YOUR_DB_PASSWORD> \
-  -e REDIS_HOST=host.docker.internal \
+  -e REDIS_HOST=<YOUR_REDIS_HOST> \
   -e REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY> \
   -e DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY> \
   minimall-backend
 ```
 
-> **注意**：根目录 `docker-compose.yml` 中后端服务暴露端口为 `8080:8080`（与 application.yml 默认 8081 不一致），如需统一请修改 compose 文件或环境变量 `SERVER_PORT`。
-
-### 完整生产部署（推荐）
+### 方案 C：完整生产部署
 
 ```bash
-# 本地推荐用 start-all.bat 直接起后端（端口 8081）
-# 若用 docker，需在 env_file / .env 中填好真实 DB 密码、Redis 密码、AI Key
-docker run -d --name mysql -p 3306:3306 \
-  -e MYSQL_ROOT_PASSWORD=<YOUR_MYSQL_ROOT_PASSWORD> \
-  -e MYSQL_DATABASE=minimall \
-  -v mysql_data:/var/lib/mysql \
-  mysql:8.0
+# 后端 + 三大依赖（MySQL / Redis）走 docker compose
+docker compose up -d mysql redis backend
 
-docker run -d --name redis -p 6379:6379 \
-  --requirepass <YOUR_REDIS_PASSWORD_OR_OMIT> \
-  redis:7-alpine
-
-# 2. 启动后端
-cd backend && mvn clean package -DskipTests
-docker build -t minimall-backend .
-docker run -d --name backend -p 8081:8081 \
-  --link mysql --link redis \
-  -e DB_HOST=mysql -e REDIS_HOST=redis \
-  -e SERVER_PORT=8081 \
-  -e DB_PASSWORD=<YOUR_DB_PASSWORD> \
-  -e REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY> \
-  -e DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY> \
-  minimall-backend
-
-# 3. 前端打包
+# 三个前端 npm run build 产物用 Nginx 托管
 cd admin-web && npm run build   # dist/
 cd seller-web && npm run build
-cd web-mall && npm run build
+cd web-mall  && npm run build
 
-# 4. Nginx 反向代理（参考 .devcontainer/init.sh 中的 nginx 配置）
+# Nginx 反代配置参考 .devcontainer/init.sh
 ```
+
+### 方案选择指南
+
+| 场景 | 推荐 |
+|---|---|
+| 本地开发，需要 HMR | `start-all.bat`（不容器化前端） |
+| 演示 / 答辩 / CI | **方案 A** compose |
+| 服务器只有后端 | 方案 B（用宿主 MySQL/Redis） |
+| 服务器全空 | 方案 C（compose + 前端 nginx） |
+
+### 文件清单
+
+```
+.
+├── docker-compose.yml          # 根级编排（MySQL+Redis+Backend）
+├── .env.example                # 环境变量模板（不提交真 .env）
+├── backend/
+│   ├── Dockerfile              # 多阶段构建
+│   └── .dockerignore           # 构建上下文过滤
+├── start-docker.bat            # Windows 启动脚本
+└── stop-docker.bat             # Windows 停止脚本
+```
+
+### 故障排查
+
+| 现象 | 原因 | 解决 |
+|---|---|---|
+| `backend` 一直 `Restarting` | MySQL/Redis 没就绪 | `docker compose logs backend` 看具体报错 |
+| 首次启动后表不存在 | `init_database.sql` 失败 | `docker compose logs mysql` 看 SQL 错误；删卷重启 `docker compose down -v && up -d` |
+| `actuator/health` 502 | Spring 还没启动完 | 等 `start_period: 90s` 过去再查 |
+| 端口被占用 | 本地已启 MySQL/Redis | 改 `.env` 中 `MYSQL_PORT` / `REDIS_PORT` / `SERVER_PORT` |
+| 改了代码不生效 | 用了旧镜像 | `docker compose build --no-cache backend` 后再 `up -d` |
 
 ---
 
