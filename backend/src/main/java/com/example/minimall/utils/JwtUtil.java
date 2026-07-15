@@ -1,22 +1,33 @@
 package com.example.minimall.utils;
 
 import io.jsonwebtoken.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import javax.annotation.PostConstruct;
 import java.util.Date;
 
 /**
  * JWT 工具类，负责令牌的生成、解析与校验。
  *
- * <p>使用 HS256 对称加密算法，密钥与过期时间硬编码在类中（仅供演示，
- * 实际生产环境应放入配置中心并保证密钥长度 ≥ 32 字节）。
+ * <p>使用 HS256 对称加密算法，密钥通过 application.yml / 环境变量注入，
+ * 默认值仅供本地开发快速启动使用。
  */
 @Component
 public class JwtUtil {
 
-    // 使用 HS256 算法，密钥长度需要至少 256 位（32 字节）
-    private String secret = "minimall2024securejwtkey1234567890abcdef12345678";
-    private long expirationTime = 1000 * 60 * 60 * 24; // 24 小时
+    @Value("${jwt.secret:minimall2024securejwtkey1234567890abcdef12345678}")
+    private String secret;
+
+    @Value("${jwt.expiration:86400000}")
+    private long expirationTimeMillis;
+
+    private long expirationTime; // 兼容旧代码中使用的毫秒为单位
+
+    @PostConstruct
+    public void init() {
+        this.expirationTime = this.expirationTimeMillis;
+    }
 
     /**
      * 根据用户对象生成 JWT 令牌。

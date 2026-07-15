@@ -5,6 +5,7 @@ import com.example.minimall.mapper.CategoryMapper;
 import com.example.minimall.mapper.ProductMapper;
 import com.example.minimall.model.Category;
 import com.example.minimall.model.Product;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -18,6 +19,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/debug")
+@Profile("dev")
 public class DebugController {
     /** 分类 Mapper（调试用） */
     private final CategoryMapper categoryMapper;

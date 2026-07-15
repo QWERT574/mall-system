@@ -21,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/ai")
 public class AIController {
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AIController.class);
     /** AI 业务服务 */
     private final AIService aiService;
     /** RAG 监控服务（问题5：可观测性） */
@@ -56,25 +57,25 @@ public class AIController {
     @PostMapping("/query")
     public Map<String, Object> aiQuery(@RequestBody Map<String, Object> request) {
         try {
-            System.out.println("[DEBUG] AI Query Request: " + request);
-            
+            logger.debug("AI Query Request: {}", request);
+
             // 当请求中没有userId时，设置默认值0
             Long userId = 0L;
             if (request.get("userId") != null && !"null".equals(request.get("userId"))) {
                 userId = Long.valueOf(String.valueOf(request.get("userId")));
             }
-            System.out.println("[DEBUG] userId: " + userId);
-            
+            logger.debug("userId: {}", userId);
+
             String query = (String) request.get("query");
-            System.out.println("[DEBUG] Original query: " + query);
-            
+            logger.debug("Original query: {}", query);
+
             // 获取服务类型，默认为商品查询
             Integer serviceType = request.get("serviceType") != null ? Integer.valueOf(String.valueOf(request.get("serviceType"))) : 1;
-            System.out.println("[DEBUG] serviceType: " + serviceType);
-            
+            logger.debug("serviceType: {}", serviceType);
+
             // 调用AI服务生成真正的智能回复
             Map<String, Object> aiResult = aiService.handleQuery(userId, query, serviceType);
-            System.out.println("[DEBUG] AI Service Result: " + aiResult);
+            logger.debug("AI Service Result: {}", aiResult);
             
             // 构建响应数据
             Map<String, Object> data = new HashMap<>();
@@ -101,10 +102,10 @@ public class AIController {
             }
             data.put("productCards", productCards);
             
-            System.out.println("[DEBUG] 最终响应数据: " + data);
+            logger.debug("最终响应数据: {}", data);
             return createSuccessResponse(data);
         } catch (Exception e) {
-            System.out.println("[ERROR] AI查询处理失败: " + e.getMessage());
+            logger.error("AI查询处理失败: {}", e.getMessage());
             e.printStackTrace();
             return createErrorResponse("AI查询处理失败: " + e.getMessage());
         }
@@ -113,7 +114,7 @@ public class AIController {
     /** AI 助手流式聊天接口（SSE），逐字返回生成结果 */
     @PostMapping("/chat")
     public SseEmitter aiChat(@RequestBody Map<String, Object> request) {
-        System.out.println("[DEBUG] AI Chat Stream Request: " + request);
+        logger.debug("AI Chat Stream Request: {}", request);
 
         Long userId = 0L;
         if (request.get("userId") != null && !"null".equals(request.get("userId"))) {
@@ -124,7 +125,7 @@ public class AIController {
         Integer serviceType = request.get("serviceType") != null ?
             Integer.valueOf(String.valueOf(request.get("serviceType"))) : 1;
 
-        System.out.println("[DEBUG] SSE Chat - userId: " + userId + ", serviceType: " + serviceType + ", query: " + query);
+        logger.debug("SSE Chat - userId: {}, serviceType: {}, query: {}", userId, serviceType, query);
 
         return aiService.handleQueryStream(userId, query, serviceType);
     }
@@ -152,7 +153,7 @@ public class AIController {
     @PostMapping("/rag-query")
     public Map<String, Object> ragQuery(@RequestBody Map<String, Object> request) {
         try {
-            System.out.println("[DEBUG] RAG Query Request: " + request);
+            logger.debug("RAG Query Request: {}", request);
 
             Long userId = 0L;
             if (request.get("userId") != null && !"null".equals(request.get("userId"))) {
@@ -168,17 +169,15 @@ public class AIController {
             String sessionToken = request.get("sessionToken") != null ?
                 String.valueOf(request.get("sessionToken")) : null;
 
-            System.out.println("[DEBUG] RAG Query - userId: " + userId + ", serviceType: " + serviceType
-                    + ", query: " + query + ", sessionToken: " + sessionToken);
+            logger.debug("RAG Query - userId: {}, serviceType: {}, query: {}, sessionToken: {}", userId, serviceType, query, sessionToken);
 
             Map<String, Object> ragResult = aiService.handleRagQuery(userId, query, serviceType, sessionToken);
-            System.out.println("[DEBUG] RAG Service Result - sources: " + ragResult.get("sourceCount")
-                    + ", score: " + ragResult.get("retrievalScore")
-                    + ", time: " + ragResult.get("responseTimeMs") + "ms");
+            logger.debug("RAG Service Result - sources: {}, score: {}, time: {}ms",
+                    ragResult.get("sourceCount"), ragResult.get("retrievalScore"), ragResult.get("responseTimeMs"));
 
             return createSuccessResponse(ragResult);
         } catch (Exception e) {
-            System.out.println("[ERROR] RAG查询处理失败: " + e.getMessage());
+            logger.error("RAG查询处理失败: {}", e.getMessage());
             e.printStackTrace();
             return createErrorResponse("RAG查询处理失败: " + e.getMessage());
         }
@@ -200,7 +199,7 @@ public class AIController {
      */
     @PostMapping("/rag-chat")
     public SseEmitter ragChat(@RequestBody Map<String, Object> request) {
-        System.out.println("[DEBUG] RAG Chat Stream Request: " + request);
+        logger.debug("RAG Chat Stream Request: {}", request);
 
         Long userId = 0L;
         if (request.get("userId") != null && !"null".equals(request.get("userId"))) {
@@ -216,8 +215,7 @@ public class AIController {
         String sessionToken = request.get("sessionToken") != null ?
             String.valueOf(request.get("sessionToken")) : null;
 
-        System.out.println("[DEBUG] RAG SSE Chat - userId: " + userId + ", serviceType: " + serviceType
-                + ", query: " + query + ", sessionToken: " + sessionToken);
+        logger.debug("RAG SSE Chat - userId: {}, serviceType: {}, query: {}, sessionToken: {}", userId, serviceType, query, sessionToken);
 
         return aiService.handleRagQueryStream(userId, query, serviceType, sessionToken);
     }

@@ -134,6 +134,12 @@ rag:
   max-context-tokens: 3000
   # 是否启用多轮对话
   multi-turn-enabled: true
+  # 是否启用混合检索（向量检索 + 关键词BM25检索，RRF融合）
+  hybrid-search-enabled: ${RAG_HYBRID_SEARCH:true}
+  # RRF融合参数k（标准值60，越大排名差异影响越小）
+  rrf-k: 60
+  # 关键词检索候选数量（融合前召回量）
+  keyword-top-k: 10
 
 # AI 回复配置
 ai:
@@ -141,7 +147,7 @@ ai:
     common-queries: "根据您的需求，为您推荐几款优质农产品：有机蔬菜礼盒 (ID:123)，价格¥128.00；有机大米 (ID:456)，价格¥78.00；生态土鸡蛋 (ID:789)，价格¥68.00。这些都是来自乡村的天然好物，品质有保证。"
     recommend-products: "根据您的需求，为您推荐几款优质农产品：有机蔬菜礼盒 (ID:123)，价格¥128.00；有机大米 (ID:456)，价格¥78.00；生态土鸡蛋 (ID:789)，价格¥68.00。这些都是来自乡村的天然好物，品质有保证。"
 
-# 文件上传配置
+# ===== 上传配置（新增） =====
 upload:
   # 上传路径 (相对路径: 优先解析为 user.dir 下, 其次尝试 user.dir/../<location>)
   # 运行时数据应放在源码树外, 故指向项目根 data/uploads/
@@ -166,6 +172,11 @@ upload:
   watermark-opacity: 50
   # 访问 URL 前缀
   url-prefix: /uploads/
+
+# JWT 配置（由 JwtUtil 读取，环境变量可覆盖）
+jwt:
+  secret: ${JWT_SECRET:minimall2024securejwtkey1234567890abcdef12345678}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 # Spring 文件上传配置
 spring.servlet.multipart:

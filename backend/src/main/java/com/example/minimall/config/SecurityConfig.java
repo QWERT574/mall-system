@@ -87,9 +87,8 @@ public class SecurityConfig {
                 .antMatchers("/api/ai/**").permitAll()
                 .antMatchers("/api/faq/**").permitAll()
                 .antMatchers("/api/cs/**").permitAll()
-                // ===== 文件上传/下载 + 调试 + 静态资源 =====
+                // ===== 文件上传/下载 + 静态资源 =====
                 .antMatchers("/api/upload/**").permitAll()
-                .antMatchers("/api/debug/**").permitAll()
                 .antMatchers("/uploads/**").permitAll()
                 .antMatchers("/images/**").permitAll()
                 // ===== WebSocket 端点 =====

@@ -300,11 +300,19 @@ public class AIService {
             String response = null;
             long llmStart = System.currentTimeMillis();
             boolean llmSuccess = false;
-            try {
-                logger.debug("尝试使用DeepSeek API生成回复...");
-                response = callDeepSeekAPI(filteredQuery, serviceType, productContext);
+
+            // 查询缓存：相同问题的重复请求直接返回缓存结果
+            String cachedResponse = queryCache.get(filteredQuery);
+            if (cachedResponse != null) {
+                logger.debug("缓存命中: query='{}'", filteredQuery);
+                response = cachedResponse;
                 llmSuccess = true;
-                logger.debug("DeepSeek API调用成功，生成回复: {}...", response.substring(0, Math.min(100, response.length())));
+            } else {
+                try {
+                    logger.debug("尝试使用DeepSeek API生成回复...");
+                    response = callDeepSeekAPI(filteredQuery, serviceType, productContext);
+                    llmSuccess = true;
+                    logger.debug("DeepSeek API调用成功，生成回复: {}...", response.substring(0, Math.min(100, response.length())));
             } catch (Exception e) {
                 logger.warn("DeepSeek API调用失败: {}", e.getMessage());
                 try {

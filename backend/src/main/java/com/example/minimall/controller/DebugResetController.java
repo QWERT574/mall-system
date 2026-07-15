@@ -3,6 +3,7 @@ package com.example.minimall.controller;
 import com.example.minimall.common.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.context.annotation.Profile;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -11,6 +12,7 @@ import java.util.Map;
 /** 调试用：将 admin 账号密码重置为默认值的接口 */
 @RestController
 @RequestMapping("/api/debug")
+@Profile("dev")
 public class DebugResetController {
 
     /** 密码编码器 */
