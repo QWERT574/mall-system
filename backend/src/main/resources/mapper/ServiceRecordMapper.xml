@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.example.minimall.mapper.ServiceRecordMapper">
-    <!-- 根据售后服务ID查询服务记录 -->
-    <select id="selectByAfterSaleId" resultType="com.example.minimall.model.ServiceRecord">
-        SELECT * FROM service_record WHERE after_sale_id = #{afterSaleId} ORDER BY created_at DESC
-    </select>
-</mapper>

@@ -48,7 +48,7 @@ services:
 
       # ---- JWT ----
       - key: JWT_SECRET
-        generateValue: openssl rand -base64 64
+        generateValue: true
       - key: JWT_EXPIRATION
         value: 86400000
 
