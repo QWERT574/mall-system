@@ -1,0 +1,58 @@
+# ============================================
+# Deploy web-mall (用户商城) to GitHub Pages
+# ============================================
+name: Deploy web-mall
+
+on:
+  push:
+    branches: [main]        # main分支推代码时触发
+    paths:
+      - 'web-mall/**'
+      - 'shared-ui/**'
+      - '.github/workflows/deploy-web-mall.yml'
+  workflow_dispatch:        # 也支持手动触发
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-web-mall
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    defaults:
+      run:
+        working-directory: web-mall
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build for production
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-mall/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

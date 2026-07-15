@@ -1,0 +1,67 @@
+# ============================================
+# Render Blueprint — 一键部署后端
+# 使用方法:
+#   1. Fork/推送此仓库到 GitHub
+#   2. 在 Render.com → Blueprint → 连接此仓库
+#   3. 自动创建 Web Service + 通过环境变量配置
+# ============================================
+services:
+  - type: web
+    name: minimall-backend
+    runtime: docker
+    repo: https://github.com/QWERT574/mall-system
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    autoDeploy: true
+    healthCheckPath: /actuator/health
+    envVars:
+      # ---- 数据库（在 Render Dashboard 设置好外部 MySQL 后填入）----
+      - key: DB_HOST
+        sync: false                        # 在 Render Dashboard 手动填
+      - key: DB_PORT
+        value: 3306
+      - key: DB_NAME
+        value: minimall
+      - key: DB_USERNAME
+        value: root
+      - key: DB_PASSWORD
+        sync: false
+
+      # ---- Redis（在 Render Dashboard 设置好外部 Redis 后填入）----
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: 6379
+      - key: REDIS_PASSWORD
+        sync: false
+
+      # ---- Server ----
+      - key: SERVER_PORT
+        value: 8081
+
+      # ---- AI ----
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+
+      # ---- JWT ----
+      - key: JWT_SECRET
+        generateValue: openssl rand -base64 64
+      - key: JWT_EXPIRATION
+        value: 86400000
+
+      # ---- RAG ----
+      - key: RAG_ENABLED
+        value: "true"
+
+      # ---- Spring ----
+      - key: SPRING_PROFILES_ACTIVE
+        value: docker
+      - key: SPRING_SQL_INIT_MODE
+        value: never
+
+      # ---- JVM ----
+      - key: JAVA_OPTS
+        value: -XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8

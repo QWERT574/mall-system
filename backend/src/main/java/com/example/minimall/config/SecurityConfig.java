@@ -118,7 +118,9 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(Arrays.asList(
             "http://localhost:*",
             "http://127.0.0.1:*",
-            "http://192.168.*:*"
+            "http://192.168.*:*",
+            "https://*.github.io",
+            "https://*.onrender.com"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
