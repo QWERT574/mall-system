@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.KnowledgeDocumentMapper">
+
+    <select id="selectByStatus" resultType="com.example.minimall.model.KnowledgeDocument">
+        SELECT * FROM knowledge_document WHERE status = #{status} ORDER BY created_at DESC
+    </select>
+
+    <select id="selectByCategory" resultType="com.example.minimall.model.KnowledgeDocument">
+        SELECT * FROM knowledge_document WHERE category = #{category} AND status = 2 ORDER BY created_at DESC
+    </select>
+
+    <update id="updateChunkCountAndStatus">
+        UPDATE knowledge_document SET chunk_count = #{chunkCount}, status = #{status}, updated_at = NOW() WHERE id = #{id}
+    </update>
+
+    <select id="searchByTitle" resultType="com.example.minimall.model.KnowledgeDocument">
+        SELECT * FROM knowledge_document WHERE title LIKE CONCAT('%', #{keyword}, '%') ORDER BY created_at DESC
+    </select>
+</mapper>

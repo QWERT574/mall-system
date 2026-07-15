@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.KnowledgeChunkMapper">
+
+    <resultMap id="chunkWithEmbeddingMap" type="com.example.minimall.model.KnowledgeChunk">
+        <id property="id" column="id"/>
+        <result property="documentId" column="document_id"/>
+        <result property="chunkIndex" column="chunk_index"/>
+        <result property="content" column="content"/>
+        <result property="embedding" column="embedding"
+                typeHandler="com.example.minimall.config.FloatArrayTypeHandler"/>
+        <result property="embeddingModel" column="embedding_model"/>
+        <result property="embeddingDim" column="embedding_dim"/>
+        <result property="tokenCount" column="token_count"/>
+        <result property="chunkMeta" column="chunk_meta"/>
+        <result property="scoreAvg" column="score_avg"/>
+        <result property="hitCount" column="hit_count"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <select id="selectByDocumentId" resultType="com.example.minimall.model.KnowledgeChunk">
+        SELECT id, document_id, chunk_index, content, embedding_model, embedding_dim,
+               token_count, chunk_meta, score_avg, hit_count, created_at
+        FROM knowledge_chunk WHERE document_id = #{documentId} ORDER BY chunk_index
+    </select>
+
+    <select id="selectAllWithEmbedding" resultMap="chunkWithEmbeddingMap">
+        SELECT id, document_id, chunk_index, content, embedding, embedding_model, embedding_dim,
+               token_count, chunk_meta, score_avg, hit_count, created_at
+        FROM knowledge_chunk WHERE embedding IS NOT NULL
+    </select>
+
+    <select id="selectWithEmbeddingByDocumentIds" resultMap="chunkWithEmbeddingMap">
+        SELECT id, document_id, chunk_index, content, embedding, embedding_model, embedding_dim,
+               token_count, chunk_meta, score_avg, hit_count, created_at
+        FROM knowledge_chunk WHERE embedding IS NOT NULL
+        AND document_id IN
+        <foreach collection="documentIds" item="did" open="(" separator="," close=")">
+            #{did}
+        </foreach>
+    </select>
+
+    <insert id="insertChunkWithEmbedding" parameterType="com.example.minimall.model.KnowledgeChunk">
+        INSERT INTO knowledge_chunk (document_id, chunk_index, content, embedding, embedding_model,
+                                     embedding_dim, token_count, chunk_meta, created_at)
+        VALUES (#{documentId}, #{chunkIndex}, #{content},
+                #{embedding,typeHandler=com.example.minimall.config.FloatArrayTypeHandler},
+                #{embeddingModel}, #{embeddingDim}, #{tokenCount}, #{chunkMeta}, NOW())
+    </insert>
+
+    <update id="updateEmbedding">
+        UPDATE knowledge_chunk
+        SET embedding = #{embedding,typeHandler=com.example.minimall.config.FloatArrayTypeHandler},
+            embedding_model = #{embeddingModel},
+            embedding_dim = #{embeddingDim}
+        WHERE id = #{id}
+    </update>
+
+    <update id="incrementHitCount">
+        UPDATE knowledge_chunk SET hit_count = hit_count + 1 WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByDocumentId">
+        DELETE FROM knowledge_chunk WHERE document_id = #{documentId}
+    </delete>
+
+    <select id="countWithEmbedding" resultType="int">
+        SELECT COUNT(*) FROM knowledge_chunk WHERE embedding IS NOT NULL
+    </select>
+</mapper>

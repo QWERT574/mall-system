@@ -1,0 +1,1 @@
+import{s as t}from"./_plugin-vue_export-helper-BXfkyRUz.js";const o=(s,a)=>t.put(`/system/config/${s}`,{configValue:a}),n=(s,a,e)=>t.put("/system/ai/config",{apiKey:s,apiUrl:a,enabled:e}),g=()=>t.get("/system/dashboard/stats"),u=()=>t.get("/system/dashboard/chart");export{u as a,n as b,g,o as u};

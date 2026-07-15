@@ -1,0 +1,168 @@
+<view class="ai-container">
+  <!-- 顶部标题栏 -->
+  <view class="ai-header">
+    <view class="header-row">
+      <text class="header-title">AI助手</text>
+      <view class="header-actions">
+        <view wx:if="{{ ragEnabled }}" class="rag-badge">
+          <text class="rag-badge-text">RAG增强</text>
+        </view>
+        <text class="clear-history-btn" bindtap="clearHistory">清空</text>
+      </view>
+    </view>
+    <view class="service-type">
+      <text class="service-label">服务类型：</text>
+      <view class="type-tabs">
+        <text 
+          class="type-tab {{ activeType === 1 ? 'active' : '' }}" 
+          bindtap="switchServiceType" 
+          data-type="1"
+        >商品查询</text>
+        <text 
+          class="type-tab {{ activeType === 2 ? 'active' : '' }}" 
+          bindtap="switchServiceType" 
+          data-type="2"
+        >物流查询</text>
+        <text 
+          class="type-tab {{ activeType === 3 ? 'active' : '' }}" 
+          bindtap="switchServiceType" 
+          data-type="3"
+        >售后咨询</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 聊天内容区域 -->
+  <scroll-view 
+    class="chat-content" 
+    scroll-y="true" 
+    scroll-into-view="{{ scrollToView }}" 
+    scroll-with-animation="true"
+  >
+    <!-- 欢迎消息 -->
+    <view class="message-system" wx:if="{{ messages.length === 0 }}">
+      <view class="system-message">
+        <text class="system-text" user-select="true">您好！我是乡村振兴农产品销售平台的AI助手，很高兴为您服务。</text>
+        <text class="system-text" user-select="true">您可以咨询以下内容：</text>
+        <view class="system-suggestions">
+          <text class="suggestion-item" bindtap="sendSuggestion" data-content="推荐一些有机蔬菜" user-select="true">推荐一些有机蔬菜</text>
+          <text class="suggestion-item" bindtap="sendSuggestion" data-content="我的订单什么时候发货" user-select="true">我的订单什么时候发货</text>
+          <text class="suggestion-item" bindtap="sendSuggestion" data-content="如何申请退款" user-select="true">如何申请退款</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 消息列表 -->
+    <view
+      wx:for="{{ messages }}"
+      wx:key="id"
+      wx:for-index="msgIdx"
+      class="message-item {{ item.type === 'user' ? 'message-user' : 'message-ai' }}"
+    >
+      <!-- 用户消息 -->
+      <view class="user-message" wx:if="{{ item.type === 'user' }}">
+        <view class="user-avatar avatar-text-wrap">
+          <text class="avatar-letter">我</text>
+        </view>
+        <view class="message-content user-content">
+          <text class="message-text" user-select="true">{{ item.content }}</text>
+        </view>
+      </view>
+
+      <!-- AI消息 -->
+      <view class="ai-message" wx:else>
+        <view class="ai-avatar avatar-text-wrap">
+          <text class="avatar-letter">AI</text>
+        </view>
+        <view class="message-content ai-content">
+          <rich-text class="message-text" user-select="true" nodes="{{ item.richContent || item.content }}" bindtap="onRichTextTap"></rich-text>
+
+          <!-- 知识来源溯源（可解释性展示） -->
+          <view wx:if="{{ item.hasSources }}" class="sources-section">
+            <view class="sources-header" bindtap="toggleSources" data-msgidx="{{msgIdx}}">
+              <view class="sources-title">
+                <text class="sources-icon">📚</text>
+                <text class="sources-title-text">知识来源 ({{ item.sourceCount }})</text>
+              </view>
+              <view class="sources-meta">
+                <text wx:if="{{ item.retrievalScore }}" class="score-badge">相似度 {{ item.retrievalScore }}</text>
+                <text class="toggle-arrow">{{ item.showSources ? '收起' : '展开' }}</text>
+              </view>
+            </view>
+            <view wx:if="{{ item.showSources }}" class="sources-list">
+              <view wx:for="{{ item.sources }}" wx:key="index" class="source-item">
+                <view class="source-item-header">
+                  <text class="source-type-tag">{{ item.typeIcon }} {{ item.type }}</text>
+                  <text class="source-score">匹配度 {{ item.score }}</text>
+                </view>
+                <text class="source-title" user-select="true">{{ item.title }}</text>
+                <text wx:if="{{ item.content }}" class="source-content" user-select="true">{{ item.content }}</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 商品卡片列表 -->
+          <view wx:if="{{ item.productDetails && item.productDetails.length > 0 }}" class="product-cards">
+            <view
+              wx:for="{{ item.productDetails }}"
+              wx:key="id"
+              wx:for-index="pIdx"
+              class="product-card"
+              bindtap="navigateToProductDetail"
+              data-id="{{item.id}}"
+            >
+              <image
+                src="{{item.coverUrl}}"
+                mode="aspectFill"
+                class="product-card-image"
+                binderror="onProductImageError"
+                data-msgidx="{{msgIdx}}"
+                data-pidx="{{pIdx}}"
+              ></image>
+              <view class="product-card-info">
+                <text class="product-card-name">{{item.name}}</text>
+                <text class="product-card-price">¥{{item.price}}</text>
+                <text class="product-card-stock" wx:if="{{item.stock < 10}}">仅剩{{item.stock}}件</text>
+                <text class="product-card-stock" wx:elif="{{item.stock < 50}}">库存紧张</text>
+                <text class="product-card-stock" wx:else>现货充足</text>
+              </view>
+            </view>
+          </view>
+
+          <!-- 响应耗时（可解释性元数据） -->
+          <view wx:if="{{ item.responseTimeMs }}" class="response-meta">
+            <text class="response-time">⚡ {{ item.responseTimeMs }}ms</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 正在输入提示 -->
+    <view class="message-item message-ai" wx:if="{{ isTyping }}">
+      <view class="ai-avatar avatar-text-wrap">
+        <text class="avatar-letter">AI</text>
+      </view>
+      <view class="message-content ai-content typing-content">
+        <text class="typing-dot"></text>
+        <text class="typing-dot"></text>
+        <text class="typing-dot"></text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 输入区域 -->
+  <view class="input-area">
+    <textarea 
+      class="input-textarea" 
+      placeholder="请输入您的问题..." 
+      placeholder-class="input-placeholder" 
+      value="{{ inputContent }}" 
+      bindinput="onInput" 
+      bindconfirm="sendMessage"
+      auto-height
+    ></textarea>
+    <button class="send-btn {{ (!inputContent.trim() || isTyping) ? 'send-btn-disabled' : '' }}" bindtap="sendMessage">
+      发送
+    </button>
+  </view>
+</view>

@@ -1,0 +1,140 @@
+﻿/* ============================================================
+   乡村振兴 标签/徽章组件样式 v1.0
+   类名前缀：ml-tag / ml-badge
+   ============================================================ */
+
+.ml-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  border-radius: var(--radius-sm);
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+/* 颜色变体 */
+.ml-tag--default {
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+}
+
+.ml-tag--primary {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+.ml-tag--success {
+  background: var(--color-success-light);
+  color: var(--color-success-dark);
+}
+
+.ml-tag--warning {
+  background: var(--color-warning-light);
+  color: var(--color-warning-dark);
+}
+
+.ml-tag--danger {
+  background: var(--color-error-light);
+  color: var(--color-error-dark);
+}
+
+.ml-tag--info {
+  background: var(--color-info-light);
+  color: var(--color-info-dark);
+}
+
+/* 品牌专有标签 */
+.ml-tag--organic {
+  background: var(--color-green-100);
+  color: var(--color-green-700);
+}
+
+.ml-tag--promo {
+  background: var(--color-orange-100);
+  color: var(--color-orange-700);
+}
+
+.ml-tag--new {
+  background: var(--color-primary-100);
+  color: var(--color-primary-800);
+}
+
+/* 尺寸 */
+.ml-tag--sm {
+  padding: 0 6px;
+  font-size: 10px;
+}
+
+.ml-tag--lg {
+  padding: 4px 14px;
+  font-size: var(--font-size-sm);
+}
+
+/* 可关闭标签 */
+.ml-tag--closable {
+  padding-right: 6px;
+}
+
+.ml-tag__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 2px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.ml-tag__close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* 圆角标签 */
+.ml-tag--rounded {
+  border-radius: var(--radius-full);
+}
+
+/* ========================================
+   徽章 (Badge)
+   ======================================== */
+
+.ml-badge {
+  position: relative;
+  display: inline-flex;
+}
+
+.ml-badge__dot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-error);
+  border: 2px solid var(--color-bg-container);
+  transform: translate(50%, -50%);
+}
+
+.ml-badge__count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-error);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  line-height: 18px;
+  text-align: center;
+  white-space: nowrap;
+  border: 2px solid var(--color-bg-container);
+  transform: translate(50%, -50%);
+}

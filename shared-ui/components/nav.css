@@ -1,0 +1,233 @@
+﻿/* ============================================================
+   乡村振兴 导航组件样式 v1.0
+   类名前缀：ml-nav / ml-sidebar / ml-tabs
+   ============================================================ */
+
+/* ========================================
+   顶部导航栏
+   ======================================== */
+.ml-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 var(--spacing-6);
+  background: var(--color-bg-container);
+  border-bottom: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-xs);
+}
+
+.ml-navbar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary-700);
+}
+
+.ml-navbar__links {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.ml-navbar__link {
+  padding: var(--spacing-2) var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.ml-navbar__link:hover {
+  background: var(--color-gray-100);
+  color: var(--color-text-primary);
+}
+
+.ml-navbar__link--active {
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+}
+
+/* ========================================
+   侧边栏导航
+   ======================================== */
+.ml-sidebar {
+  width: 240px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-container);
+  border-right: 1px solid var(--color-border-light);
+}
+
+.ml-sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-5) var(--spacing-6);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.ml-sidebar__brand-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.ml-sidebar__brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.ml-sidebar__brand-name {
+  font-family: var(--font-family-display);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.ml-sidebar__brand-sub {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.ml-sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-4) var(--spacing-3);
+}
+
+.ml-sidebar__section-label {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wider);
+}
+
+.ml-sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  margin-bottom: var(--spacing-1);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.ml-sidebar__item:hover {
+  background: var(--color-gray-100);
+  color: var(--color-text-primary);
+}
+
+.ml-sidebar__item--active {
+  background: linear-gradient(135deg, var(--color-primary-500), var(--color-primary-600));
+  color: #ffffff;
+  box-shadow: var(--shadow-sm);
+}
+
+.ml-sidebar__item--active:hover {
+  background: linear-gradient(135deg, var(--color-primary-600), var(--color-primary-700));
+  color: #ffffff;
+}
+
+.ml-sidebar__item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.ml-sidebar__item-badge {
+  margin-left: auto;
+  padding: 0 7px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 10px;
+  background: var(--color-error);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.ml-sidebar__footer {
+  padding: var(--spacing-4) var(--spacing-6);
+  border-top: 1px solid var(--color-border-light);
+}
+
+/* ========================================
+   标签页导航
+   ======================================== */
+.ml-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--color-border-light);
+  gap: 0;
+}
+
+.ml-tabs__item {
+  padding: var(--spacing-3) var(--spacing-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.ml-tabs__item:hover {
+  color: var(--color-text-primary);
+}
+
+.ml-tabs__item--active {
+  color: var(--color-primary-700);
+  border-bottom-color: var(--color-primary-500);
+}
+
+/* ========================================
+   面包屑导航
+   ======================================== */
+.ml-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+.ml-breadcrumb__item {
+  color: var(--color-text-tertiary);
+  text-decoration: none;
+}
+
+.ml-breadcrumb__item:hover {
+  color: var(--color-primary-600);
+}
+
+.ml-breadcrumb__item--active {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.ml-breadcrumb__separator {
+  color: var(--color-gray-300);
+}

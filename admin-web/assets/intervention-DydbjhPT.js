@@ -1,0 +1,1 @@
+import{s as t}from"./_plugin-vue_export-helper-BXfkyRUz.js";function s(n){return t.get("/admin/intervention",{params:n})}function r(n,e){return t.post(`/admin/intervention/${n}/process`,e)}function o(n,e){return t.post(`/admin/intervention/${n}/assign`,{adminId:e})}function a(){return t.post("/admin/intervention/stats")}export{a,o as b,s as g,r as p};

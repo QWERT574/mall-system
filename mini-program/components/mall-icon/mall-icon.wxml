@@ -1,0 +1,3 @@
+<view class="ml-icon ml-icon--{{size}}" style="color: {{color}}">
+  <text class="ml-icon-text">{{iconText}}</text>
+</view>

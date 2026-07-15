@@ -1,0 +1,1 @@
+import{s as r}from"./_plugin-vue_export-helper-BXfkyRUz.js";const o=t=>r.get("/product/list",{params:t}),u=t=>r.post("/product/create",t),s=(t,e)=>r.put(`/product/${t}`,e),d=t=>r.delete(`/product/${t}`);export{u as c,d,o as g,s as u};

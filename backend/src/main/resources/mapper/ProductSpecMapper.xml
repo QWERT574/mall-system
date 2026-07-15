@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.ProductSpecMapper">
+    <select id="selectByProductId" resultType="com.example.minimall.model.ProductSpec">
+        SELECT * FROM product_spec WHERE product_id = #{productId}
+    </select>
+    
+    <!-- 乐观锁更新规格库存 -->
+    <update id="updateStockById">
+        UPDATE product_spec 
+        SET stock = stock - #{decrease}
+        WHERE id = #{id} AND stock >= #{decrease}
+    </update>
+</mapper>

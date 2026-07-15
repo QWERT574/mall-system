@@ -1,0 +1,1 @@
+import{s as t}from"./_plugin-vue_export-helper-BXfkyRUz.js";const n=e=>t.get("/aftersale/list",{params:e}),o=e=>{const s=e.result===1?2:3;return t.post(`/aftersale/${e.afterSaleId}/process`,{status:s,serviceResult:e.remark,refundAmount:e.refundAmount||0})},u=e=>t.post("/admin/intervention",e);export{n as g,o as p,u as s};

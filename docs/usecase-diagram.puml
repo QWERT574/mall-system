@@ -1,0 +1,116 @@
+@startuml
+left to right direction
+skinparam usecaseBackgroundColor #ffffff
+skinparam usecaseBorderColor #000000
+skinparam usecaseFontColor #000000
+skinparam usecaseFontSize 14
+skinparam actorStyle awesome
+skinparam actorFontColor #000000
+skinparam actorFontSize 14
+skinparam ArrowColor #000000
+skinparam defaultFontSize 14
+
+actor 管理员
+actor 商家
+actor 买家
+
+usecase "用户管理" as A1
+usecase "添加用户" as A1_1
+usecase "删除用户" as A1_2
+usecase "商家管理" as A2
+usecase "审核商家" as A2_1
+usecase "禁用商家" as A2_2
+usecase "商品审核" as A3
+usecase "审核通过" as A3_1
+usecase "强制下架" as A3_2
+usecase "订单管理" as A4
+usecase "查看订单" as A4_1
+usecase "异常处理" as A4_2
+usecase "售后仲裁" as A5
+usecase "处理申诉" as A5_1
+usecase "介入仲裁" as A5_2
+
+usecase "店铺管理" as S1
+usecase "资质上传" as S1_1
+usecase "信息维护" as S1_2
+usecase "商品发布" as S2
+usecase "发布商品" as S2_1
+usecase "上下架" as S2_2
+usecase "订单处理" as S3
+usecase "订单发货" as S3_1
+usecase "退款处理" as S3_2
+usecase "营销活动" as S4
+usecase "折扣设置" as S4_1
+usecase "优惠券发放" as S4_2
+usecase "售后服务" as S5
+usecase "同意退款" as S5_1
+usecase "拒绝退款" as S5_2
+
+usecase "账号管理" as B1
+usecase "注册登录" as B1_1
+usecase "修改密码" as B1_2
+usecase "商品浏览" as B2
+usecase "搜索商品" as B2_1
+usecase "查看详情" as B2_2
+usecase "购物下单" as B3
+usecase "加入购物车" as B3_1
+usecase "提交订单" as B3_2
+usecase "支付订单" as B4
+usecase "余额支付" as B4_1
+usecase "在线支付" as B4_2
+usecase "售后服务" as B5
+usecase "申请售后" as B5_1
+usecase "查看进度" as B5_2
+
+管理员 -- A1
+管理员 -- A2
+管理员 -- A3
+管理员 -- A4
+管理员 -- A5
+
+商家 -- S1
+商家 -- S2
+商家 -- S3
+商家 -- S4
+商家 -- S5
+
+买家 -- B1
+买家 -- B2
+买家 -- B3
+买家 -- B4
+买家 -- B5
+
+A1 ..> A1_1 : <<include>>
+A1 ..> A1_2 : <<include>>
+A2 ..> A2_1 : <<include>>
+A2 ..> A2_2 : <<include>>
+A3 ..> A3_1 : <<include>>
+A3 ..> A3_2 : <<include>>
+A4 ..> A4_1 : <<include>>
+A4 ..> A4_2 : <<include>>
+A5 ..> A5_1 : <<include>>
+A5 ..> A5_2 : <<include>>
+
+S1 ..> S1_1 : <<include>>
+S1 ..> S1_2 : <<include>>
+S2 ..> S2_1 : <<include>>
+S2 ..> S2_2 : <<include>>
+S3 ..> S3_1 : <<include>>
+S3 ..> S3_2 : <<include>>
+S4 ..> S4_1 : <<include>>
+S4 ..> S4_2 : <<include>>
+S5 ..> S5_1 : <<include>>
+S5 ..> S5_2 : <<include>>
+
+B1 ..> B1_1 : <<include>>
+B1 ..> B1_2 : <<include>>
+B2 ..> B2_1 : <<include>>
+B2 ..> B2_2 : <<include>>
+B3 ..> B3_1 : <<include>>
+B3 ..> B3_2 : <<include>>
+B4 ..> B4_1 : <<include>>
+B4 ..> B4_2 : <<include>>
+B5 ..> B5_1 : <<include>>
+B5 ..> B5_2 : <<include>>
+
+@enduml

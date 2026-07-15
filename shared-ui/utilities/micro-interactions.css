@@ -1,0 +1,200 @@
+﻿/* ============================================================
+   乡村振兴 微交互系统 v1.0
+   全局悬停/点击/入场动画工具类
+   ============================================================ */
+
+/* === 卡片悬浮抬起 === */
+.ml-card-lift {
+  transition: transform var(--transition-spring), box-shadow var(--transition-smooth);
+}
+.ml-card-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover);
+}
+.ml-card-lift:active {
+  transform: translateY(-2px);
+}
+
+/* === 按钮按压反馈 === */
+.ml-btn-press {
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+.ml-btn-press:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow-md);
+}
+.ml-btn-press:active {
+  transform: translateY(0) scale(0.97);
+  box-shadow: var(--shadow-glow-sm);
+}
+
+/* === 交错入场动画 === */
+.ml-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  animation: mlStaggerIn 0.5s var(--transition-glide) forwards;
+}
+.ml-stagger > *:nth-child(1)  { animation-delay: 0.05s; }
+.ml-stagger > *:nth-child(2)  { animation-delay: 0.10s; }
+.ml-stagger > *:nth-child(3)  { animation-delay: 0.15s; }
+.ml-stagger > *:nth-child(4)  { animation-delay: 0.20s; }
+.ml-stagger > *:nth-child(5)  { animation-delay: 0.25s; }
+.ml-stagger > *:nth-child(6)  { animation-delay: 0.30s; }
+.ml-stagger > *:nth-child(7)  { animation-delay: 0.35s; }
+.ml-stagger > *:nth-child(8)  { animation-delay: 0.40s; }
+.ml-stagger > *:nth-child(9)  { animation-delay: 0.45s; }
+.ml-stagger > *:nth-child(10) { animation-delay: 0.50s; }
+
+@keyframes mlStaggerIn {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* === 骨架屏闪烁 === */
+.ml-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-gray-100);
+}
+.ml-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--gradient-shimmer);
+  animation: mlShimmer 1.8s infinite;
+}
+@keyframes mlShimmer {
+  0%   { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* 骨架屏形状 */
+.ml-skeleton-text {
+  height: 1em;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--spacing-2);
+}
+.ml-skeleton-text.short  { width: 60%; }
+.ml-skeleton-text.medium { width: 80%; }
+.ml-skeleton-text.long   { width: 100%; }
+
+.ml-skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.ml-skeleton-image {
+  width: 100%;
+  height: 200px;
+  border-radius: var(--radius-md);
+}
+
+/* === 悬停缩放 === */
+.ml-hover-scale {
+  transition: transform var(--transition-smooth);
+}
+.ml-hover-scale:hover {
+  transform: scale(1.04);
+}
+
+/* === 聚焦光环增强 === */
+.ml-focus-ring:focus-visible {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* === 页面入场 === */
+.ml-page-enter {
+  animation: mlPageEnter 0.45s var(--transition-glide);
+}
+@keyframes mlPageEnter {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* === 脉冲提示 === */
+.ml-pulse-dot {
+  position: relative;
+}
+.ml-pulse-dot::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: var(--color-error);
+  border-radius: 50%;
+  border: 2px solid white;
+  animation: mlPulse 2s infinite;
+}
+@keyframes mlPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.6; }
+}
+
+/* === 下划线滑入 === */
+.ml-underline-reveal {
+  position: relative;
+}
+.ml-underline-reveal::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--color-primary-500);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-smooth);
+}
+.ml-underline-reveal:hover::after {
+  width: 100%;
+}
+
+/* === 图片悬浮缩放 === */
+.ml-img-zoom {
+  overflow: hidden;
+}
+.ml-img-zoom img {
+  transition: transform var(--transition-slow);
+}
+.ml-img-zoom:hover img {
+  transform: scale(1.08);
+}
+
+/* === 数字跳动 === */
+@keyframes mlCountUp {
+  from { opacity: 0; transform: translateY(1em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ml-count-up {
+  display: inline-block;
+  animation: mlCountUp 0.6s var(--transition-spring) backwards;
+}
+
+/* === 波纹点击 === */
+.ml-ripple {
+  position: relative;
+  overflow: hidden;
+}
+.ml-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10%);
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.5s, background-size 0.5s;
+}
+.ml-ripple:active::after {
+  background-size: 20000%;
+  opacity: 1;
+  transition: background-size 0s, opacity 0s;
+}

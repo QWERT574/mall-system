@@ -1,0 +1,1 @@
+import{s as e}from"./_plugin-vue_export-helper-BXfkyRUz.js";const s=t=>e.get("/activity/list",{params:t}),r=t=>e.post("/activity/create",t),a=(t,i)=>e.post(`/activity/${t}/update`,i),o=t=>e.delete(`/activity/${t}`);export{r as c,o as d,s as g,a as u};

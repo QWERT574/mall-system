@@ -1,0 +1,118 @@
+/* ============================================================
+   乡村振兴 小程序统一主题变量 v1.0
+   与 shared-ui/design-tokens.css 保持同步
+   在 app.wxss 顶部 @import 此文件
+   ============================================================ */
+
+/* 
+   使用说明：
+   1. 在 app.wxss 第一行添加: @import './shared-theme.wxss';
+   2. 所有页面使用 var(--xxx) 引用变量，避免硬编码色值
+   3. 如需修改主题色，仅修改此文件即可全端生效
+*/
+
+page {
+  /* === 品牌主色 - 丰收金 === */
+  --color-primary:            #d4a574;
+  --color-primary-light:      #faeedc;
+  --color-primary-lighter:    #fdf8f1;
+  --color-primary-dark:       #a6723a;
+  --color-primary-darker:     #6b4423;
+
+  /* === 辅助色 - 自然绿 === */
+  --color-green:              #66bb6a;
+  --color-green-light:        #e8f5e9;
+  --color-green-dark:         #4caf50;
+
+  /* === 强调色 - 暖橙 === */
+  --color-orange:             #e07b39;
+  --color-orange-light:       #ffecdb;
+  --color-orange-dark:        #a8551e;
+
+  /* === 中性色 === */
+  --color-gray-50:            #fafaf9;
+  --color-gray-100:           #f5f5f4;
+  --color-gray-200:           #e7e5e4;
+  --color-gray-300:           #d6d3d1;
+  --color-gray-400:           #a8a29e;
+  --color-gray-500:           #78716c;
+  --color-gray-600:           #57534e;
+  --color-gray-800:           #292524;
+
+  /* === 功能色 === */
+  --color-success:            #52c41a;
+  --color-success-light:      #f6ffed;
+  --color-warning:            #faad14;
+  --color-warning-light:      #fffbe6;
+  --color-error:              #ff4d4f;
+  --color-error-light:        #fff2f0;
+  --color-info:               #1677ff;
+  --color-info-light:         #e6f4ff;
+
+  /* === 背景色 === */
+  --bg-page:                  #faf8f5;
+  --bg-card:                  #ffffff;
+  --bg-input:                 #fafaf9;
+
+  /* === 文字色 === */
+  --text-primary:             var(--color-gray-800);
+  --text-secondary:           var(--color-gray-600);
+  --text-tertiary:            var(--color-gray-500);
+  --text-inverse:             #ffffff;
+  --text-price:               var(--color-error);
+
+  /* === 边框色 === */
+  --border-light:             var(--color-gray-200);
+  --border-default:           var(--color-gray-300);
+
+  /* === 阴影 === */
+  --shadow-sm:                0 2rpx 8rpx rgba(107, 68, 35, 0.06);
+  --shadow-md:                0 4rpx 16rpx rgba(107, 68, 35, 0.10);
+  --shadow-lg:                0 8rpx 24rpx rgba(107, 68, 35, 0.14);
+  --shadow-card-hover:        0 12rpx 28rpx rgba(107, 68, 35, 0.10), 0 4rpx 16rpx rgba(212, 165, 116, 0.15);
+  --shadow-glow-sm:           0 2rpx 12rpx rgba(212, 165, 116, 0.15);
+  --shadow-glow-md:           0 4rpx 20rpx rgba(212, 165, 116, 0.25);
+
+  /* === 圆角 === */
+  --radius-sm:                8rpx;
+  --radius-md:                16rpx;
+  --radius-lg:                24rpx;
+  --radius-xl:                32rpx;
+  --radius-full:              9999rpx;
+
+  /* === 间距 === */
+  --spacing-xs:               8rpx;
+  --spacing-sm:               16rpx;
+  --spacing-md:               24rpx;
+  --spacing-lg:               32rpx;
+  --spacing-xl:               48rpx;
+
+  /* === 字体 === */
+  --font-size-xs:             24rpx;
+  --font-size-sm:             26rpx;
+  --font-size-base:           28rpx;
+  --font-size-md:             30rpx;
+  --font-size-lg:             32rpx;
+  --font-size-xl:             36rpx;
+  --font-size-2xl:            44rpx;
+
+  --font-weight-medium:       500;
+  --font-weight-semibold:     600;
+  --font-weight-bold:         700;
+
+  /* === 动画 === */
+  --transition-fast:          0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base:          0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth:        0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
+  --transition-spring:        0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --transition-bounce:        0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* === 渐变 === */
+  --gradient-brand:           linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  --gradient-warm:            linear-gradient(135deg, var(--color-orange), var(--color-orange-dark));
+  --gradient-nature:          linear-gradient(135deg, var(--color-green), var(--color-green-dark));
+
+  /* === 表面色 === */
+  --surface-raised:           #fdfaf5;
+  --surface-overlay:          rgba(255, 255, 255, 0.85);
+}

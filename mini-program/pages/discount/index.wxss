@@ -1,0 +1,27 @@
+/* pages/discount/index.wxss */
+.container { padding: 16px; background: #f9fafb; min-height: 100vh; }
+.header { text-align: center; margin-bottom: 20px; }
+.title { font-size: 24px; font-weight: 700; color: #1f2937; display: block; }
+.subtitle { font-size: 13px; color: #9ca3af; margin-top: 6px; display: block; }
+.loading, .empty { text-align: center; padding: 60px 0; font-size: 14px; color: #9ca3af; }
+
+.activity-list { display: flex; flex-direction: column; gap: 14px; }
+.act-card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+.act-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.act-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #fff; }
+.type-1 { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.type-2 { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.type-3 { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.act-name { font-size: 17px; font-weight: 700; color: #1f2937; flex: 1; }
+.act-countdown { font-size: 12px; font-weight: 600; color: #d97706; background: #fef3c7; padding: 3px 10px; border-radius: 12px; }
+.act-desc { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
+.act-rule { font-size: 14px; color: #374151; padding: 8px 12px; background: #fffbeb; border-radius: 8px; border-left: 3px solid #f59e0b; margin-bottom: 10px; }
+.strong { color: #d97706; font-weight: 700; }
+
+.act-products { background: #f9fafb; border-radius: 8px; padding: 8px 12px; }
+.ap-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f3f4f6; }
+.ap-item:last-child { border-bottom: none; }
+.ap-name { font-size: 13px; color: #374151; flex: 1; }
+.ap-prices { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.ap-orig { font-size: 12px; color: #9ca3af; text-decoration: line-through; }
+.ap-disc { font-size: 15px; font-weight: 700; color: #ef4444; }

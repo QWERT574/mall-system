@@ -1,0 +1,138 @@
+<view class="bg-page">
+  <!-- 头部 -->
+  <view class="header-bar">
+    <view class="logo">
+      <text class="logo-emoji">🌾</text>
+      <view class="logo-text">
+        <text class="logo-title">乡村振兴</text>
+        <text class="logo-sub">新鲜 · 优质 · 直达</text>
+      </view>
+    </view>
+    <view class="header-icons">
+      <view class="icon-btn" bindtap="goToCart">
+        <mall-icon name="cart" size="md" color="#5a3e2b"/>
+      </view>
+      <view class="icon-btn" bindtap="goToUser">
+        <mall-icon name="user" size="md" color="#5a3e2b"/>
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-icon"><mall-icon name="search" size="sm" color="#a09890"/></view>
+    <input type="text" placeholder="搜索新鲜农产品…" bindinput="onSearchInput" value="{{searchKeyword}}" class="search-input" confirm-type="search" bindconfirm="onSearch"/>
+  </view>
+
+  <!-- 轮播图 -->
+  <view class="banner-wrapper">
+    <view class="banner-badge">活动精选</view>
+    <swiper class="banner-swiper" autoplay="true" interval="4000" circular="true" indicator-dots="true" indicator-color="rgba(255,255,255,0.4)" indicator-active-color="#ffffff">
+      <swiper-item wx:for="{{bannerList}}" wx:key="index">
+        <block wx:if="{{item.type === 'promotion'}}">
+          <view class="banner-promo {{item.style}}" bindtap="onBannerTap" data-type="{{item.type}}" data-link="{{item.link}}">
+            <view class="banner-promo-decoration"></view>
+            <view class="banner-promo-content">
+              <text class="banner-promo-emoji">{{item.emoji}}</text>
+              <view class="banner-promo-text">
+                <text class="banner-promo-title">{{item.title}}</text>
+                <text class="banner-promo-sub">{{item.subtitle}}</text>
+              </view>
+              <text class="banner-promo-arrow">›</text>
+            </view>
+            <view class="banner-promo-tag">GO</view>
+          </view>
+        </block>
+        <block wx:else>
+          <image src="{{item.imageUrl}}" mode="aspectFill" class="banner-image" bindtap="onBannerTap" data-id="{{item.productId}}" binderror="onImageError" data-type="banner" data-index="{{index}}"/>
+        </block>
+      </swiper-item>
+    </swiper>
+  </view>
+
+  <!-- 搜索历史 -->
+  <view wx:if="{{!loading && !error && !searchKeyword && searchHistory.length > 0}}" class="section-card search-history fade-in">
+    <view class="history-header">
+      <view class="history-title"><mall-icon name="clock" size="sm"/><text>搜索历史</text></view>
+      <text bindtap="clearSearchHistory" class="clear-history">清空</text>
+    </view>
+    <view class="history-list">
+      <view wx:for="{{searchHistory}}" wx:key="index" class="history-item" bindtap="searchByHistory" data-keyword="{{item}}">
+        <text class="history-tag">#</text>{{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view wx:if="{{loading}}" class="loading-container">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 错误提示 -->
+  <view wx:elif="{{error}}" class="error-container">
+    <text class="error-text">{{error}}</text>
+    <view class="retry-btn" bindtap="loadList">重新加载</view>
+  </view>
+
+  <!-- 商品列表 -->
+  <block wx:elif="{{productList.length > 0}}">
+    <!-- 区块标题 -->
+    <view class="section-header">
+      <view class="section-title-line"></view>
+      <text class="section-title-text">{{searchKeyword ? '搜索结果' : '热门推荐'}}</text>
+      <view class="section-title-line"></view>
+    </view>
+
+    <scroll-view class="product-scroll" scroll-y="true" bindscrolltolower="loadMore">
+      <view class="product-grid">
+        <view wx:for="{{productList}}" wx:key="id" class="item" bindtap="viewProduct" data-id="{{item.id}}">
+          <view class="product-img-wrap">
+            <image
+              src="{{item.cover}}"
+              mode="aspectFill"
+              lazy-load="true"
+              class="product-image"
+              binderror="onImageError"
+              bindload="onImageLoad"
+            />
+            <view class="stock-tag" wx:if="{{item.stock < 10}}">仅剩{{item.stock}}件</view>
+            <view class="stock-tag stock-warn" wx:elif="{{item.stock < 50}}">库存紧张</view>
+          </view>
+          <view class="product-info">
+            <text class="item-name">{{item.name}}</text>
+            <view class="price-row">
+              <text class="item-price"><text class="yen">¥</text>{{item.price}}</text>
+              <text class="item-sales" wx:if="{{item.sales}}">已售{{item.sales}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="load-more">
+      <block wx:if="{{loading && productList.length > 0}}">
+        <view class="load-spinner"></view>
+        <text class="loading-text">加载中...</text>
+      </block>
+      <block wx:elif="{{hasMore}}">
+        <text class="load-more-text" bindtap="loadMore">上拉加载更多</text>
+      </block>
+      <block wx:else>
+        <view class="no-more-line"></view>
+        <text class="no-more-text">— 已经到底了 —</text>
+      </block>
+    </view>
+  </block>
+
+  <!-- 空状态 -->
+  <block wx:else>
+    <view class="empty-state">
+      <text class="empty-icon">{{searchKeyword ? '🔍' : '🌱'}}</text>
+      <text class="empty-title">{{searchKeyword ? '没有找到相关商品' : '暂无商品'}}</text>
+      <text class="empty-desc">{{searchKeyword ? '换个关键词试试吧' : '优质农产品即将上架'}}</text>
+      <view class="empty-action" bindtap="{{searchKeyword ? 'onReset' : ''}}" wx:if="{{searchKeyword}}">清除筛选</view>
+    </view>
+  </block>
+</view>
+

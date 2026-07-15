@@ -1,0 +1,66 @@
+﻿/* ============================================================
+   乡村振兴 排版工具类 v1.0
+   ============================================================ */
+
+/* 字号 */
+.ml-text-xs  { font-size: var(--font-size-xs); }
+.ml-text-sm  { font-size: var(--font-size-sm); }
+.ml-text-base{ font-size: var(--font-size-base); }
+.ml-text-md  { font-size: var(--font-size-md); }
+.ml-text-lg  { font-size: var(--font-size-lg); }
+.ml-text-xl  { font-size: var(--font-size-xl); }
+.ml-text-2xl { font-size: var(--font-size-2xl); }
+.ml-text-3xl { font-size: var(--font-size-3xl); }
+.ml-text-4xl { font-size: var(--font-size-4xl); }
+
+/* 字重 */
+.ml-font-light    { font-weight: var(--font-weight-light); }
+.ml-font-regular  { font-weight: var(--font-weight-regular); }
+.ml-font-medium   { font-weight: var(--font-weight-medium); }
+.ml-font-semibold { font-weight: var(--font-weight-semibold); }
+.ml-font-bold     { font-weight: var(--font-weight-bold); }
+
+/* 文本颜色 */
+.ml-text-primary   { color: var(--color-text-primary); }
+.ml-text-secondary { color: var(--color-text-secondary); }
+.ml-text-tertiary  { color: var(--color-text-tertiary); }
+.ml-text-disabled  { color: var(--color-text-disabled); }
+.ml-text-inverse   { color: var(--color-text-inverse); }
+.ml-text-link      { color: var(--color-text-link); }
+.ml-text-success   { color: var(--color-success); }
+.ml-text-warning   { color: var(--color-warning); }
+.ml-text-error     { color: var(--color-error); }
+
+/* 字间距 */
+.ml-tracking-tight  { letter-spacing: var(--letter-spacing-tight); }
+.ml-tracking-normal { letter-spacing: var(--letter-spacing-normal); }
+.ml-tracking-wide   { letter-spacing: var(--letter-spacing-wide); }
+
+/* 对齐 */
+.ml-text-left    { text-align: left; }
+.ml-text-center  { text-align: center; }
+.ml-text-right   { text-align: right; }
+
+/* 截断 */
+.ml-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ml-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 行高 */
+.ml-leading-tight  { line-height: var(--line-height-tight); }
+.ml-leading-normal { line-height: var(--line-height-normal); }
+.ml-leading-relaxed{ line-height: var(--line-height-relaxed); }
+
+/* 字体族 */
+.ml-font-display { font-family: var(--font-family-display); }
+.ml-font-body    { font-family: var(--font-family-body); }
+.ml-font-mono    { font-family: var(--font-family-mono); }

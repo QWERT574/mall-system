@@ -1,0 +1,27 @@
+﻿<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <rect width="400" height="300" fill="#f5f9f5"/>
+  
+  <!-- 农田图案 -->
+  <rect x="0" y="150" width="400" height="150" fill="#e8f5e9"/>
+  <path d="M0 150 Q100 140 200 150 T400 150" stroke="#4caf50" stroke-width="2" fill="none"/>
+  <path d="M0 170 Q100 160 200 170 T400 170" stroke="#4caf50" stroke-width="2" fill="none"/>
+  <path d="M0 190 Q100 180 200 190 T400 190" stroke="#4caf50" stroke-width="2" fill="none"/>
+  
+  <!-- 太阳 -->
+  <circle cx="350" cy="50" r="30" fill="#ffc107"/>
+  <line x1="350" y1="10" x2="350" y2="0" stroke="#ffc107" stroke-width="3"/>
+  <line x1="350" y1="90" x2="350" y2="100" stroke="#ffc107" stroke-width="3"/>
+  <line x1="310" y1="50" x2="300" y2="50" stroke="#ffc107" stroke-width="3"/>
+  <line x1="390" y1="50" x2="400" y2="50" stroke="#ffc107" stroke-width="3"/>
+  
+  <!-- 文字 -->
+  <text x="200" y="130" font-family="Arial, sans-serif" font-size="24" fill="#1b3a1b" text-anchor="middle" font-weight="bold">乡村振兴</text>
+  <text x="200" y="160" font-family="Arial, sans-serif" font-size="16" fill="#2d5a2d" text-anchor="middle">优质农产品，新鲜直达</text>
+  
+  <!-- 装饰元素 -->
+  <circle cx="50" cy="250" r="20" fill="#8bc34a" opacity="0.6"/>
+  <circle cx="100" cy="270" r="15" fill="#8bc34a" opacity="0.6"/>
+  <circle cx="350" cy="260" r="18" fill="#8bc34a" opacity="0.6"/>
+</svg>
+
