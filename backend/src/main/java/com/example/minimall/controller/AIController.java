@@ -1,5 +1,6 @@
 package com.example.minimall.controller;
 
+import com.example.minimall.common.Result;
 import com.example.minimall.model.AIServiceLog;
 import com.example.minimall.model.Product;
 import com.example.minimall.service.AIService;
@@ -55,7 +56,7 @@ public class AIController {
 
     /** AI 助手问答接口：处理用户问题并返回结果与关联商品卡片 */
     @PostMapping("/query")
-    public Map<String, Object> aiQuery(@RequestBody Map<String, Object> request) {
+    public Result<?> aiQuery(@RequestBody Map<String, Object> request) {
         try {
             logger.debug("AI Query Request: {}", request);
 
@@ -103,11 +104,11 @@ public class AIController {
             data.put("productCards", productCards);
             
             logger.debug("最终响应数据: {}", data);
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
             logger.error("AI查询处理失败: {}", e.getMessage());
             e.printStackTrace();
-            return createErrorResponse("AI查询处理失败: " + e.getMessage());
+            return Result.error("AI查询处理失败: " + e.getMessage());
         }
     }
 
@@ -151,7 +152,7 @@ public class AIController {
      * @param request 请求体：{ query, userId?, serviceType?, sessionToken? }
      */
     @PostMapping("/rag-query")
-    public Map<String, Object> ragQuery(@RequestBody Map<String, Object> request) {
+    public Result<?> ragQuery(@RequestBody Map<String, Object> request) {
         try {
             logger.debug("RAG Query Request: {}", request);
 
@@ -175,11 +176,11 @@ public class AIController {
             logger.debug("RAG Service Result - sources: {}, score: {}, time: {}ms",
                     ragResult.get("sourceCount"), ragResult.get("retrievalScore"), ragResult.get("responseTimeMs"));
 
-            return createSuccessResponse(ragResult);
+            return Result.success(ragResult);
         } catch (Exception e) {
             logger.error("RAG查询处理失败: {}", e.getMessage());
             e.printStackTrace();
-            return createErrorResponse("RAG查询处理失败: " + e.getMessage());
+            return Result.error("RAG查询处理失败: " + e.getMessage());
         }
     }
 
@@ -222,7 +223,7 @@ public class AIController {
 
     /** 分页查询 AI 服务调用日志 */
     @GetMapping("/logs")
-    public Map<String, Object> getAILogs(@RequestParam(required = false) Long userId,
+    public Result<?> getAILogs(@RequestParam(required = false) Long userId,
                                         @RequestParam(required = false) Integer serviceType,
                                         @RequestParam(defaultValue = "1") Integer page,
                                         @RequestParam(defaultValue = "10") Integer size) {
@@ -235,59 +236,59 @@ public class AIController {
             result.put("current", logs.getCurrent());
             result.put("size", logs.getSize());
             
-            return createSuccessResponse(result);
+            return Result.success(result);
         } catch (Exception e) {
             e.printStackTrace();
-            return createErrorResponse("获取AI服务日志失败: " + e.getMessage());
+            return Result.error("获取AI服务日志失败: " + e.getMessage());
         }
     }
 
     /** 根据 ID 查询 AI 服务日志详情 */
     @GetMapping("/logs/{id}")
-    public Map<String, Object> getAILogById(@PathVariable Long id) {
+    public Result<?> getAILogById(@PathVariable Long id) {
         try {
             AIServiceLog log = aiService.getLogById(id);
             if (log != null) {
-                return createSuccessResponse(log);
+                return Result.success(log);
             } else {
-                return createErrorResponse("AI服务日志不存在");
+                return Result.error("AI服务日志不存在");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return createErrorResponse("获取AI服务日志失败: " + e.getMessage());
+            return Result.error("获取AI服务日志失败: " + e.getMessage());
         }
     }
 
     /** 删除单条 AI 服务日志 */
     @DeleteMapping("/logs/{id}")
-    public Map<String, Object> deleteAILog(@PathVariable Long id) {
+    public Result<?> deleteAILog(@PathVariable Long id) {
         try {
             aiService.deleteLog(id);
-            return createSuccessResponse(null);
+            return Result.success(null);
         } catch (Exception e) {
             e.printStackTrace();
-            return createErrorResponse("删除AI服务日志失败: " + e.getMessage());
+            return Result.error("删除AI服务日志失败: " + e.getMessage());
         }
     }
     
     /** 批量删除 AI 服务日志 */
     @PostMapping("/logs/batch-delete")
-    public Map<String, Object> batchDeleteAILogs(@RequestBody List<Long> ids) {
+    public Result<?> batchDeleteAILogs(@RequestBody List<Long> ids) {
         try {
             if (ids == null || ids.isEmpty()) {
-                return createErrorResponse("日志ID列表不能为空");
+                return Result.error("日志ID列表不能为空");
             }
             aiService.batchDeleteLogs(ids);
-            return createSuccessResponse(null);
+            return Result.success(null);
         } catch (Exception e) {
             e.printStackTrace();
-            return createErrorResponse("批量删除AI服务日志失败: " + e.getMessage());
+            return Result.error("批量删除AI服务日志失败: " + e.getMessage());
         }
     }
     
     /** 按用户/服务类型条件清空 AI 服务日志 */
     @DeleteMapping("/logs/clear")
-    public Map<String, Object> clearAILogs(
+    public Result<?> clearAILogs(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Integer serviceType) {
         try {
@@ -298,10 +299,10 @@ public class AIController {
             } else {
                 aiService.clearLogs();
             }
-            return createSuccessResponse(null);
+            return Result.success(null);
         } catch (Exception e) {
             e.printStackTrace();
-            return createErrorResponse("清空AI服务日志失败: " + e.getMessage());
+            return Result.error("清空AI服务日志失败: " + e.getMessage());
         }
     }
 
@@ -309,7 +310,7 @@ public class AIController {
 
     /** 系统监控仪表盘（问题5） */
     @GetMapping("/monitor/dashboard")
-    public Map<String, Object> getMonitorDashboard() {
+    public Result<?> getMonitorDashboard() {
         try {
             Map<String, Object> data = new HashMap<>();
             if (ragMonitorService != null) {
@@ -319,15 +320,15 @@ public class AIController {
             if (intentClassifierService != null) {
                 data.put("intentStatistics", intentClassifierService.getIntentStatistics());
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("获取监控仪表盘失败: " + e.getMessage());
+            return Result.error("获取监控仪表盘失败: " + e.getMessage());
         }
     }
 
     /** 向量检索策略信息（问题1：HNSW 索引状态） */
     @GetMapping("/monitor/vector-search")
-    public Map<String, Object> getVectorSearchInfo() {
+    public Result<?> getVectorSearchInfo() {
         try {
             Map<String, Object> data = new HashMap<>();
             if (vectorStoreService != null) {
@@ -339,71 +340,71 @@ public class AIController {
                 data.put("usingExternalApi", embeddingService.isUsingExternalApi());
                 data.put("lexiconInfo", embeddingService.getLexiconInfo());
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("获取向量检索信息失败: " + e.getMessage());
+            return Result.error("获取向量检索信息失败: " + e.getMessage());
         }
     }
 
     /** Embedding 语义质量自测（问题2） */
     @GetMapping("/monitor/embedding-quality")
-    public Map<String, Object> getEmbeddingQuality() {
+    public Result<?> getEmbeddingQuality() {
         try {
             if (embeddingService == null) {
-                return createErrorResponse("EmbeddingService 未初始化");
+                return Result.error("EmbeddingService 未初始化");
             }
             Map<String, Object> data = embeddingService.evaluateSemanticQuality();
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("Embedding 质量评估失败: " + e.getMessage());
+            return Result.error("Embedding 质量评估失败: " + e.getMessage());
         }
     }
 
     /** 意图分类统计（问题7） */
     @GetMapping("/monitor/intents")
-    public Map<String, Object> getIntentStatistics() {
+    public Result<?> getIntentStatistics() {
         try {
             Map<String, Object> data = new HashMap<>();
             if (intentClassifierService != null) {
                 data = intentClassifierService.getIntentStatistics();
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("获取意图统计失败: " + e.getMessage());
+            return Result.error("获取意图统计失败: " + e.getMessage());
         }
     }
 
     /** 知识库覆盖率（问题4：冷启动监控） */
     @GetMapping("/monitor/coverage")
-    public Map<String, Object> getKnowledgeCoverage() {
+    public Result<?> getKnowledgeCoverage() {
         try {
             Map<String, Object> data = new HashMap<>();
             if (seedFAQInitializer != null) {
                 data = seedFAQInitializer.getCoverageDetails();
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("获取知识库覆盖率失败: " + e.getMessage());
+            return Result.error("获取知识库覆盖率失败: " + e.getMessage());
         }
     }
 
     /** 内容过滤审计日志（问题3） */
     @GetMapping("/monitor/filter-audit")
-    public Map<String, Object> getFilterAuditLogs(@RequestParam(defaultValue = "50") int limit) {
+    public Result<?> getFilterAuditLogs(@RequestParam(defaultValue = "50") int limit) {
         try {
             Map<String, Object> data = new HashMap<>();
             if (contentFilterService != null) {
                 data.put("auditLogs", contentFilterService.getAuditLogs(limit));
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("获取过滤审计日志失败: " + e.getMessage());
+            return Result.error("获取过滤审计日志失败: " + e.getMessage());
         }
     }
 
     /** 手动触发种子FAQ初始化（问题4：冷启动） */
     @PostMapping("/monitor/init-seed-faqs")
-    public Map<String, Object> initSeedFAQs() {
+    public Result<?> initSeedFAQs() {
         try {
             if (seedFAQInitializer != null) {
                 seedFAQInitializer.initializeSeedFAQs();
@@ -412,26 +413,10 @@ public class AIController {
             if (seedFAQInitializer != null) {
                 data = seedFAQInitializer.getCoverageDetails();
             }
-            return createSuccessResponse(data);
+            return Result.success(data);
         } catch (Exception e) {
-            return createErrorResponse("种子FAQ初始化失败: " + e.getMessage());
+            return Result.error("种子FAQ初始化失败: " + e.getMessage());
         }
     }
 
-    // 构建成功响应
-    private Map<String, Object> createSuccessResponse(Object data) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 0);
-        response.put("message", "success");
-        response.put("data", data);
-        return response;
-    }
-
-    // 构建错误响应
-    private Map<String, Object> createErrorResponse(String message) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("code", 1);
-        response.put("message", message);
-        return response;
-    }
 }
