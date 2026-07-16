@@ -1,7 +1,5 @@
 package com.example.minimall.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.minimall.config.DeepSeekConfig;
 import com.example.minimall.mapper.AIServiceLogMapper;
 import com.example.minimall.model.*;
@@ -332,6 +330,7 @@ public class AIService {
                     ragMonitorService.recordLlmCall(llmDuration, llmSuccess);
                 }
             }
+            }   // 关闭 else 块（cachedResponse == null 分支）
 
             // 将新的查询结果存入缓存
             if (response != null) {
@@ -1950,75 +1949,4 @@ public class AIService {
         }
         return defaultResponse(query);
     }
-
-    /**
-     * 查询用户的所有 AI 服务日志
-     *
-     * @param userId 用户 ID
-     * @return 日志列表
-     */
-    public List<AIServiceLog> getLogsByUserId(Long userId) {
-        return aiServiceLogMapper.selectByUserId(userId);
-    }
-
-    /**
-     * 分页查询 AI 服务日志（管理后台用）
-     *
-     * @param page        页码
-     * @param size        每页大小
-     * @param userId      用户 ID（可空）
-     * @param serviceType 服务类型（可空）
-     * @return 日志分页
-     */
-    public IPage<AIServiceLog> getLogsPage(int page, int size, Long userId, Integer serviceType) {
-        Page<AIServiceLog> pageQuery = new Page<>(page, size);
-        return aiServiceLogMapper.selectPage(pageQuery, userId, serviceType);
-    }
-
-    /**
-     * 根据 ID 查询 AI 服务日志详情
-     *
-     * @param id 日志 ID
-     * @return 日志实体
-     */
-    public AIServiceLog getLogById(Long id) {
-        return aiServiceLogMapper.selectById(id);
-    }
-
-    /**
-     * 删除 AI 服务日志
-     *
-     * @param id 日志 ID
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteLog(Long id) {
-        aiServiceLogMapper.deleteById(id);
-    }
-    
-    /** 批量删除 AI 服务日志 */
-    @Transactional(rollbackFor = Exception.class)
-    public void batchDeleteLogs(List<Long> ids) {
-        for (Long id : ids) {
-            aiServiceLogMapper.deleteById(id);
-        }
-    }
-    
-    /** 清空全部 AI 服务日志 */
-    @Transactional(rollbackFor = Exception.class)
-    public void clearLogs() {
-        aiServiceLogMapper.deleteAll();
-    }
-    
-    // 清空指定用户的AI服务日志
-    @Transactional(rollbackFor = Exception.class)
-    public void clearLogsByUserId(Long userId) {
-        aiServiceLogMapper.deleteByUserId(userId);
-    }
-    
-    /** 清空指定类型的 AI 服务日志 */
-    @Transactional(rollbackFor = Exception.class)
-    public void clearLogsByServiceType(Integer serviceType) {
-        aiServiceLogMapper.deleteByServiceType(serviceType);
-    }
 }
-

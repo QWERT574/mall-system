@@ -4,6 +4,7 @@ import com.example.minimall.common.Result;
 import com.example.minimall.model.AIServiceLog;
 import com.example.minimall.model.Product;
 import com.example.minimall.service.AIService;
+import com.example.minimall.service.AiLogService;
 import com.example.minimall.service.ContentFilterService;
 import com.example.minimall.service.EmbeddingService;
 import com.example.minimall.service.IntentClassifierService;
@@ -25,6 +26,8 @@ public class AIController {
     private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AIController.class);
     /** AI 业务服务 */
     private final AIService aiService;
+    /** AI 服务日志管理 */
+    private final AiLogService aiLogService;
     /** RAG 监控服务（问题5：可观测性） */
     private final RagMonitorService ragMonitorService;
     /** 意图识别服务（问题7：动态路由） */
@@ -39,6 +42,7 @@ public class AIController {
     private final EmbeddingService embeddingService;
 
     public AIController(AIService aiService,
+                        AiLogService aiLogService,
                         RagMonitorService ragMonitorService,
                         IntentClassifierService intentClassifierService,
                         ContentFilterService contentFilterService,
@@ -46,6 +50,7 @@ public class AIController {
                         VectorStoreService vectorStoreService,
                         EmbeddingService embeddingService) {
         this.aiService = aiService;
+        this.aiLogService = aiLogService;
         this.ragMonitorService = ragMonitorService;
         this.intentClassifierService = intentClassifierService;
         this.contentFilterService = contentFilterService;
@@ -228,7 +233,7 @@ public class AIController {
                                         @RequestParam(defaultValue = "1") Integer page,
                                         @RequestParam(defaultValue = "10") Integer size) {
         try {
-            com.baomidou.mybatisplus.core.metadata.IPage<AIServiceLog> logs = aiService.getLogsPage(page, size, userId, serviceType);
+            com.baomidou.mybatisplus.core.metadata.IPage<AIServiceLog> logs = aiLogService.getLogsPage(page, size, userId, serviceType);
             
             Map<String, Object> result = new HashMap<>();
             result.put("total", logs.getTotal());
@@ -247,7 +252,7 @@ public class AIController {
     @GetMapping("/logs/{id}")
     public Result<?> getAILogById(@PathVariable Long id) {
         try {
-            AIServiceLog log = aiService.getLogById(id);
+            AIServiceLog log = aiLogService.getLogById(id);
             if (log != null) {
                 return Result.success(log);
             } else {
@@ -263,7 +268,7 @@ public class AIController {
     @DeleteMapping("/logs/{id}")
     public Result<?> deleteAILog(@PathVariable Long id) {
         try {
-            aiService.deleteLog(id);
+            aiLogService.deleteLog(id);
             return Result.success(null);
         } catch (Exception e) {
             e.printStackTrace();
@@ -278,7 +283,7 @@ public class AIController {
             if (ids == null || ids.isEmpty()) {
                 return Result.error("日志ID列表不能为空");
             }
-            aiService.batchDeleteLogs(ids);
+            aiLogService.batchDeleteLogs(ids);
             return Result.success(null);
         } catch (Exception e) {
             e.printStackTrace();
@@ -293,11 +298,11 @@ public class AIController {
             @RequestParam(required = false) Integer serviceType) {
         try {
             if (userId != null) {
-                aiService.clearLogsByUserId(userId);
+                aiLogService.clearLogsByUserId(userId);
             } else if (serviceType != null) {
-                aiService.clearLogsByServiceType(serviceType);
+                aiLogService.clearLogsByServiceType(serviceType);
             } else {
-                aiService.clearLogs();
+                aiLogService.clearLogs();
             }
             return Result.success(null);
         } catch (Exception e) {

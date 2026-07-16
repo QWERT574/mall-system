@@ -47,6 +47,19 @@
 
 ---
 
-## Task 3: AIService 拆分（后续）
+## Task 3: 从 AIService 提取 AiLogService
 
-**Objective:** 按职责拆分为 `AiChatService`（对话）、`RagService`（RAG）、`AiLogService`（日志）
+**Objective:** 将 AIService 中 8 个日志管理方法提取到独立的 `AiLogService`
+
+**为什么要做：** 日志管理是独立的职责（CRUD on ai_service_log 表），与 AI 对话/RAG/推荐无任何共享状态，提取后：
+- AIService 减少 70 行 + 1 个 Mapper 依赖
+- 职责边界清晰，后续改日志逻辑不影响 AI 对话
+
+**文件：**
+- 创建: `backend/src/main/java/com/example/minimall/service/AiLogService.java`
+- 修改: `backend/src/main/java/com/example/minimall/controller/AIController.java` — 注入 AiLogService，路由日志请求
+- 修改: `backend/src/main/java/com/example/minimall/service/AIService.java` — 移除 aiServiceLogMapper + 8 个日志方法
+
+**验证：** `mvn compile` + `mvn test`
+
+**风险：** 低。日志 CRUD 与 AI 逻辑无耦合，提取后接口签名不变。
