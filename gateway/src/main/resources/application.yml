@@ -42,6 +42,26 @@ spring:
           predicates:
             - Path=/api/order/**, /api/cart/**, /api/aftersale/**
 
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payment/**, /api/coupon/**, /api/discount/**, /api/activity/**
+
+        - id: chat-service
+          uri: lb://chat-service
+          predicates:
+            - Path=/api/cs/**, /api/chat/**, /api/ws/**
+
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/ai/**, /api/faq/**, /api/rag/**
+
+        - id: common-uploads
+          uri: lb://chat-service
+          predicates:
+            - Path=/api/upload/**
+
     # ── Sentinel 网关限流（统一在 spring.cloud 下）──
         # ===== Phase 1 兜底（全部 /api/** → minimall-backend）=====
         - id: minimall-backend
