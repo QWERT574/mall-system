@@ -22,22 +22,22 @@ export default defineConfig({
     historyApiFallback: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false
       },
       '/images': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false
       },
       '/uploads': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         changeOrigin: true,
         secure: false
       },
       '/ws-chat': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:8080',
         ws: true,
         changeOrigin: true
       }

@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin
+
+      routes:
+
+
+        # ===== 文件上传/静态资源 =====
+        - id: minimall-uploads
+          uri: lb://minimall-service
+          predicates:
+            - Path=/uploads/**, /images/**
+
+        # ===== 监控端点 =====
+        - id: minimall-actuator
+          uri: lb://minimall-service
+          predicates:
+            - Path=/actuator/**
+
+        # ===== WebSocket =====
+        - id: minimall-websocket
+          uri: lb:ws://minimall-service
+          predicates:
+            - Path=/ws-chat/**
+
+        # ===== Phase 2 拆分路由（按服务分流）=====
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**, /api/user/**, /api/address/**, /api/captcha/**
+        - id: product-service
+          uri: lb://product-service
+          predicates:
+            - Path=/api/product/**, /api/category/**
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**, /api/cart/**, /api/aftersale/**
+
+    # ── Sentinel 网关限流（统一在 spring.cloud 下）──
+        # ===== Phase 1 兜底（全部 /api/** → minimall-backend）=====
+        - id: minimall-backend
+          uri: lb://minimall-service
+          predicates:
+            - Path=/api/**
+
+    sentinel:
+      transport:
+        dashboard: ${SENTINEL_DASHBOARD:localhost}:8858
+        port: 8720
+      eager: true
+      scg:
+        fallback:
+          mode: response
+          response-status: 429
+          response-body: '{"code":429,"message":"请求过于频繁，请稍后再试","data":null}'
+
+# ── JWT 密钥（无默认值，强制从环境变量读取）──
+jwt:
+  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWp3dC1rZXktZm9yLW1pbmltYWxsLWRldi0yMDI0}
+
+logging:
+  level:
+    com.example.minimall.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
