@@ -12,7 +12,7 @@ spring:
 
         # ===== 文件上传/静态资源 =====
         - id: minimall-uploads
-          uri: lb://minimall-service
+          uri: lb://product-service
           predicates:
             - Path=/uploads/**, /images/**
 

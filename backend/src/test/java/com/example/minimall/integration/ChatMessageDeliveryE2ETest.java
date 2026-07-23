@@ -61,12 +61,12 @@ class ChatMessageDeliveryE2ETest {
         User user = new User();
         user.setId(101L);
         user.setUsername("testuser");
-        userToken = jwtUtil.generateToken(user);
+        userToken = jwtUtil.generateToken(user.getId(), user.getUsername());
 
         User seller = new User();
         seller.setId(11L);
         seller.setUsername("testseller");
-        sellerToken = jwtUtil.generateToken(seller);
+        sellerToken = jwtUtil.generateToken(seller.getId(), seller.getUsername());
     }
 
     @Test

@@ -29,6 +29,8 @@ public class SecurityConfig {
             .authorizeRequests()
             // 商品浏览公开
             .antMatchers("/api/product/list", "/api/product/detail/**", "/api/category/**").permitAll()
+            // 静态资源公开
+            .antMatchers("/uploads/**", "/images/**").permitAll()
             // 健康检查
             .antMatchers("/actuator/health").permitAll()
             .antMatchers("/actuator/**").hasIpAddress("127.0.0.1")

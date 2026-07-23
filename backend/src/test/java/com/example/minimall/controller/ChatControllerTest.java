@@ -47,7 +47,7 @@ class ChatControllerTest {
         User user = new User();
         user.setId(101L);
         user.setUsername("testuser");
-        authToken = jwtUtil.generateToken(user);
+        authToken = jwtUtil.generateToken(user.getId(), user.getUsername());
         headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + authToken);
         headers.set("Content-Type", "application/json");
@@ -96,7 +96,7 @@ class ChatControllerTest {
         User seller = new User();
         seller.setId(11L);
         seller.setUsername("testseller");
-        String sellerToken = jwtUtil.generateToken(seller);
+        String sellerToken = jwtUtil.generateToken(seller.getId(), seller.getUsername());
         HttpHeaders sellerHeaders = new HttpHeaders();
         sellerHeaders.set("Authorization", "Bearer " + sellerToken);
         sellerHeaders.set("User-Type", "2");
