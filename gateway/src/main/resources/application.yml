@@ -12,7 +12,7 @@ spring:
 
         # ===== 文件上传/静态资源 =====
         - id: minimall-uploads
-          uri: lb://product-service
+          uri: lb://chat-service
           predicates:
             - Path=/uploads/**, /images/**
 
@@ -61,6 +61,11 @@ spring:
           uri: lb://chat-service
           predicates:
             - Path=/api/upload/**
+
+        - id: seller-review
+          uri: lb://chat-service
+          predicates:
+            - Path=/api/seller/**, /api/review/**
 
     # ── Sentinel 网关限流（统一在 spring.cloud 下）──
         # ===== Phase 1 兜底（全部 /api/** → minimall-backend）=====
