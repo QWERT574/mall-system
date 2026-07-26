@@ -1,13 +1,20 @@
 ﻿/* ============================================================
-   乡村振兴 按钮组件样式 v1.0
+   乡村振兴 按钮组件样式 v1.1
    类名前缀：ml-btn
+   v1.1 更新（2026-07-26）：
+   1. 新增 loading 加载态：内联 spinner、防重复提交、透明度区分普通禁用
+   2. 全部变体补齐 :active 按压反馈（此前仅 primary/danger 有）
+   3. transition 从 all 改为精确属性，避免布局属性参与动画
+   4. 触控设备（pointer: coarse）最小命中高度 44px（WCAG 2.5.5）
    ============================================================ */
 
 .ml-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--spacing-2);
+  min-height: var(--size-control-md);
   padding: 10px 24px;
   border: 2px solid transparent;
   border-radius: var(--radius-md);
@@ -16,7 +23,13 @@
   font-weight: var(--font-weight-semibold);
   line-height: 1;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast),
+              opacity var(--transition-fast),
+              filter var(--transition-fast);
   outline: none;
   white-space: nowrap;
   user-select: none;
@@ -24,7 +37,7 @@
 }
 
 .ml-btn:focus-visible {
-  box-shadow: 0 0 0 3px var(--color-primary-100);
+  box-shadow: var(--focus-ring);
 }
 
 .ml-btn:disabled {
@@ -33,10 +46,38 @@
   pointer-events: none;
 }
 
+/* === 加载状态（v1.1 新增） ===
+   用法：<button class="ml-btn ml-btn--primary ml-btn--loading" disabled>
+          <span class="ml-btn__spinner"></span>提交中…
+        </button>
+   MlButton.vue 通过 loading prop 自动渲染 spinner 并禁用 */
+.ml-btn--loading,
+.ml-btn--loading:disabled {
+  opacity: 0.8;
+  cursor: wait;
+}
+.ml-btn--loading:hover {
+  transform: none;            /* 加载中不再上浮，避免误导可点击 */
+  box-shadow: var(--shadow-sm);
+}
+
+.ml-btn__spinner {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: mlBtnSpin 0.6s linear infinite;
+}
+@keyframes mlBtnSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* 尺寸 */
-.ml-btn--sm { padding: 6px 16px; font-size: var(--font-size-sm); border-radius: var(--radius-sm); }
-.ml-btn--md { padding: 10px 24px; font-size: var(--font-size-base); border-radius: var(--radius-md); }
-.ml-btn--lg { padding: 14px 32px; font-size: var(--font-size-md); border-radius: var(--radius-lg); }
+.ml-btn--sm { min-height: var(--size-control-sm); padding: 6px 16px; font-size: var(--font-size-sm); border-radius: var(--radius-sm); }
+.ml-btn--md { min-height: var(--size-control-md); padding: 10px 24px; font-size: var(--font-size-base); border-radius: var(--radius-md); }
+.ml-btn--lg { min-height: var(--size-control-lg); padding: 14px 32px; font-size: var(--font-size-md); border-radius: var(--radius-lg); }
 
 /* 变体 */
 .ml-btn--primary {
@@ -64,6 +105,9 @@
   border-color: var(--color-primary-500);
   color: var(--color-primary-600);
 }
+.ml-btn--secondary:active {
+  background: var(--color-primary-100);   /* v1.1 补齐按压反馈 */
+}
 
 .ml-btn--success {
   background: linear-gradient(135deg, var(--color-green-500), var(--color-green-600));
@@ -74,6 +118,10 @@
   background: linear-gradient(135deg, var(--color-green-600), var(--color-green-700));
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
+}
+.ml-btn--success:active {
+  transform: translateY(0);               /* v1.1 补齐按压反馈 */
+  box-shadow: var(--shadow-xs);
 }
 
 .ml-btn--danger {
@@ -86,11 +134,25 @@
   box-shadow: var(--shadow-md);
   filter: brightness(1.1);
 }
+.ml-btn--danger:active {
+  transform: translateY(0);               /* v1.1 补齐按压反馈 */
+  box-shadow: var(--shadow-xs);
+  filter: brightness(0.95);
+}
 
 .ml-btn--warning {
   background: linear-gradient(135deg, var(--color-warning), var(--color-warning-dark));
   color: #ffffff;
   box-shadow: var(--shadow-sm);
+}
+.ml-btn--warning:hover {
+  transform: translateY(-1px);            /* v1.1 补齐悬浮反馈 */
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.05);
+}
+.ml-btn--warning:active {
+  transform: translateY(0);               /* v1.1 补齐按压反馈 */
+  box-shadow: var(--shadow-xs);
 }
 
 .ml-btn--text {
@@ -104,6 +166,9 @@
   background: var(--color-primary-50);
   color: var(--color-primary-600);
 }
+.ml-btn--text:active {
+  background: var(--color-primary-100);   /* v1.1 补齐按压反馈 */
+}
 
 .ml-btn--ghost {
   background: transparent;
@@ -113,6 +178,9 @@
 .ml-btn--ghost:hover {
   background: var(--color-gray-100);
   color: var(--color-text-primary);
+}
+.ml-btn--ghost:active {
+  background: var(--color-gray-200);      /* v1.1 补齐按压反馈 */
 }
 
 .ml-btn--block {
@@ -126,3 +194,15 @@
 }
 .ml-btn--icon.ml-btn--sm { padding: 6px; }
 .ml-btn--icon.ml-btn--lg { padding: 14px; }
+
+/* === 触控优化（v1.1 新增）：触屏设备最小命中区域 44px（WCAG 2.5.5） === */
+@media (pointer: coarse) {
+  .ml-btn { min-height: var(--size-touch-target); }
+  .ml-btn--sm { min-height: 36px; }
+  .ml-btn--icon { min-width: var(--size-touch-target); }
+}
+
+/* === 小屏适配（v1.1 新增）：超小屏块级按钮内边距收敛，避免文字挤压 === */
+@media (max-width: 480px) {
+  .ml-btn--block { padding-left: 16px; padding-right: 16px; }
+}

@@ -64,3 +64,21 @@
 .ml-font-display { font-family: var(--font-family-display); }
 .ml-font-body    { font-family: var(--font-family-body); }
 .ml-font-mono    { font-family: var(--font-family-mono); }
+
+/* ---------- v1.1 新增 ---------- */
+
+/* 补齐 5xl 刻度 */
+.ml-text-5xl { font-size: var(--font-size-5xl); }
+
+/* 流式 Hero 标题：随视口在 3xl–5xl 间平滑缩放，避免移动端过大 */
+.ml-text-hero {
+  font-size: clamp(var(--font-size-3xl), 6vw, var(--font-size-5xl));
+  line-height: var(--line-height-tight);
+}
+
+/* 移动端大字号工具类收敛（h1-h4 全局缩放见 base.css） */
+@media (max-width: 768px) {
+  .ml-text-5xl { font-size: var(--font-size-3xl); }
+  .ml-text-4xl { font-size: var(--font-size-3xl); }
+  .ml-text-3xl { font-size: var(--font-size-2xl); }
+}

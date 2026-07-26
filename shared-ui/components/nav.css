@@ -231,3 +231,65 @@
 .ml-breadcrumb__separator {
   color: var(--color-gray-300);
 }
+
+/* ============================================================
+   v1.1 新增（2026-07-26）：响应式导航（移动端抽屉）
+   入场动画依赖 utilities/animations.css 中的 mlFadeIn / mlFadeInDown
+   ============================================================ */
+
+/* 抽屉遮罩 */
+.ml-sidebar-mask {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal-back);
+  background: var(--color-bg-mask);
+  animation: mlFadeIn 0.2s ease-out;
+}
+
+@media (min-width: 769px) {
+  .ml-sidebar-mask { display: none; }
+}
+
+@media (max-width: 768px) {
+  /* 侧边栏转为抽屉：默认收起，加 .ml-sidebar--open 展开 */
+  .ml-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: var(--z-modal);
+    transform: translateX(-100%);
+    transition: transform var(--transition-glide);
+  }
+  .ml-sidebar--open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* 顶部导航链接默认收纳，加 .ml-navbar__links--open 下拉展开 */
+  .ml-navbar { position: relative; }
+  .ml-navbar__links { display: none; }
+  .ml-navbar__links--open {
+    display: flex;
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-1);
+    padding: var(--spacing-2);
+    background: var(--color-bg-container);
+    border-bottom: 1px solid var(--color-border-light);
+    box-shadow: var(--shadow-md);
+    animation: mlFadeInDown 0.25s ease-out;
+  }
+
+  /* Tabs 小屏横向滚动，避免挤压换行 */
+  .ml-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .ml-tabs::-webkit-scrollbar { display: none; }
+  .ml-tabs__item { white-space: nowrap; }
+}

@@ -1,5 +1,12 @@
 ﻿/* ============================================================
-   乡村振兴 动画工具类 v1.0
+   乡村振兴 动画工具类 v1.1
+   v1.1 更新（2026-07-26）：
+   1. 修复关键帧重名冲突：mlShimmer → mlShimmerBg（骨架屏背景位移）、
+      mlPulse → mlPulseFade（透明度脉冲）。此前与 micro-interactions.css
+      同名定义冲突并被覆盖，导致 .ml-skeleton 闪烁动画实际失效
+   2. 移除与 micro-interactions.css 重复的 .ml-hover-scale（以那边为准）
+   3. 过渡工具从 transition: all 改为精确属性
+   4. 新增 prefers-reduced-motion 全局动效降级（无障碍）
    ============================================================ */
 
 /* 基础动画 */
@@ -38,7 +45,8 @@
   to   { transform: translateY(0); }
 }
 
-@keyframes mlPulse {
+/* v1.1 重命名（原 mlPulse，与 micro-interactions.css 冲突） */
+@keyframes mlPulseFade {
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.5; }
 }
@@ -48,7 +56,8 @@
   to   { transform: rotate(360deg); }
 }
 
-@keyframes mlShimmer {
+/* v1.1 重命名（原 mlShimmer，与 micro-interactions.css 冲突） */
+@keyframes mlShimmerBg {
   0%   { background-position: -1000px 0; }
   100% { background-position: 1000px 0; }
 }
@@ -61,7 +70,7 @@
 .ml-animate-fade-in-right{ animation: mlFadeInRight 0.4s ease-out both; }
 .ml-animate-scale-in     { animation: mlScaleIn 0.3s ease-out both; }
 .ml-animate-slide-up     { animation: mlSlideUp 0.3s ease-out both; }
-.ml-animate-pulse        { animation: mlPulse 2s ease-in-out infinite; }
+.ml-animate-pulse        { animation: mlPulseFade 2s ease-in-out infinite; }
 .ml-animate-spin         { animation: mlSpin 1s linear infinite; }
 
 /* 延迟工具类 */
@@ -71,21 +80,31 @@
 .ml-delay-400 { animation-delay: 0.4s; }
 .ml-delay-500 { animation-delay: 0.5s; }
 
-/* 骨架屏 */
+/* 骨架屏 —— v1.1 修复：换用独立关键帧 mlShimmerBg，闪烁效果恢复 */
 .ml-skeleton {
   background: linear-gradient(90deg, var(--color-gray-100) 25%, var(--color-gray-200) 50%, var(--color-gray-100) 75%);
   background-size: 200% 100%;
-  animation: mlShimmer 1.5s infinite;
+  animation: mlShimmerBg 1.5s infinite;
   border-radius: var(--radius-sm);
 }
 
-/* 过渡工具 */
+/* 过渡工具 —— v1.1 精确化：仅动画视觉属性，避免布局抖动与性能开销 */
 .ml-transition {
-  transition: all var(--transition-base);
+  transition: background-color var(--transition-base),
+              border-color var(--transition-base),
+              color var(--transition-base),
+              box-shadow var(--transition-base),
+              transform var(--transition-base),
+              opacity var(--transition-base);
 }
 
 .ml-transition-fast {
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast),
+              border-color var(--transition-fast),
+              color var(--transition-fast),
+              box-shadow var(--transition-fast),
+              transform var(--transition-fast),
+              opacity var(--transition-fast);
 }
 
 /* 悬浮效果 */
@@ -98,10 +117,14 @@
   box-shadow: var(--shadow-lg);
 }
 
-.ml-hover-scale {
-  transition: transform var(--transition-base);
-}
-
-.ml-hover-scale:hover {
-  transform: scale(1.02);
+/* === 动效降级（v1.1 新增）：尊重系统"减少动态效果"设置 === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

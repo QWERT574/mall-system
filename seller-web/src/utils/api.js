@@ -185,7 +185,7 @@ api.getOrderDetail = (id) => api.get(`/order/detail/${id}`);
 api.updateOrderStatus = (data) => api.post('/order/updateStatus', data);
 
 // 支付订单
-api.payOrder = (orderId, paymentInfo) => api.post(`/order/pay/${orderId}`, paymentInfo);
+api.payOrder = (orderId, paymentInfo) => api.post(`/payment/pay/${orderId}`, paymentInfo);
 
 // 获取用户信息
 api.getUserInfo = () => api.get('/user/info');
