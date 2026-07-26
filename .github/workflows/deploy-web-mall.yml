@@ -1,16 +1,12 @@
 # ============================================
 # Deploy web-mall (用户商城) to GitHub Pages
+# ⚠️ 已停用自动触发：单独部署会覆盖整个 Pages 站点（与另两端互斥）。
+# 统一发布路径见 deploy-pages.yml（/mall 子路径）；本文件仅保留手动触发备用。
 # ============================================
 name: Deploy web-mall
 
 on:
-  push:
-    branches: [main]        # main分支推代码时触发
-    paths:
-      - 'web-mall/**'
-      - 'shared-ui/**'
-      - '.github/workflows/deploy-web-mall.yml'
-  workflow_dispatch:        # 也支持手动触发
+  workflow_dispatch:        # 仅手动触发
 
 permissions:
   contents: read

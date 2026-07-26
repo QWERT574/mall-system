@@ -1,15 +1,11 @@
 # ============================================
 # Deploy admin-web (管理后台) to GitHub Pages
+# ⚠️ 已停用自动触发：单独部署会覆盖整个 Pages 站点（与另两端互斥）。
+# 统一发布路径见 deploy-pages.yml（/admin 子路径）；本文件仅保留手动触发备用。
 # ============================================
 name: Deploy admin-web
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'admin-web/**'
-      - 'shared-ui/**'
-      - '.github/workflows/deploy-admin-web.yml'
   workflow_dispatch:
 
 permissions:

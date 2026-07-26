@@ -1,0 +1,104 @@
+# ============================================
+# 统一部署三端前端到同一个 GitHub Pages 站点
+#   /        → 根落地页（仓库根 index.html + assets/ + images/）
+#   /admin/  → admin-web
+#   /seller/ → seller-web
+#   /mall/   → web-mall
+# 背景：GitHub Pages 每仓库仅一个站点，三条独立部署工作流会互相覆盖；
+#       本工作流合并为单一工件统一发布（三条旧工作流保留为手动触发备用）。
+# ============================================
+name: Deploy Pages (unified)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'admin-web/**'
+      - 'seller-web/**'
+      - 'web-mall/**'
+      - 'shared-ui/**'
+      - 'index.html'
+      - 'assets/**'
+      - 'images/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 单一并发组：同一站点的部署严格串行，杜绝互相覆盖
+concurrency:
+  group: pages-unified
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # ---- admin-web（TS，构建内含 vue-tsc 类型检查）----
+      - name: Build admin-web
+        working-directory: admin-web
+        run: |
+          npm ci
+          npm run build -- --base=/admin/
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      # ---- seller-web（hash 路由）----
+      - name: Build seller-web
+        working-directory: seller-web
+        run: |
+          npm ci
+          npm run build -- --base=/seller/
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      # ---- web-mall（hash 路由）----
+      - name: Build web-mall
+        working-directory: web-mall
+        run: |
+          npm ci
+          npm run build -- --base=/mall/
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      # ---- 组装单一站点工件 ----
+      - name: Assemble site
+        run: |
+          mkdir -p site/admin site/seller site/mall
+          cp index.html site/
+          cp -r assets site/assets
+          cp -r images site/images
+          cp -r admin-web/dist/*  site/admin/
+          cp -r seller-web/dist/* site/seller/
+          cp -r web-mall/dist/*   site/mall/
+
+      - name: Verify site layout
+        run: |
+          test -f site/index.html
+          test -f site/admin/index.html
+          test -f site/seller/index.html
+          test -f site/mall/index.html
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
