@@ -1,0 +1,9 @@
+# Gateway bootstrap — 连接 Nacos 注册中心
+spring:
+  application:
+    name: minimall-gateway
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:localhost}:8848

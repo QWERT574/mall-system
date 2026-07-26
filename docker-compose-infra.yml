@@ -7,12 +7,18 @@
 #   docker compose -f docker-compose-infra.yml up -d
 #   docker compose -f docker-compose-infra.yml down -v
 #
-# 访问地址：
+# 访问地址（仅本机可访问，端口已绑定 127.0.0.1 防止外网）：
 #   RocketMQ Dashboard:  http://localhost:8088
-#   Nacos Console:       http://localhost:8848/nacos  (账号 nacos/nacos)
-#   Sentinel Dashboard:  http://localhost:8858         (账号 sentinel/sentinel)
+#   Nacos Console:       http://localhost:8848/nacos
+#   Sentinel Dashboard:  http://localhost:8858
 #
-# 注意：此文件只启中间件，应用服务（backend/gateway）本地 Maven 启动
+# 安全说明：
+#   - 开发环境 Nacos 鉴权关闭（NACOS_AUTH_ENABLE=false），端口绑定 127.0.0.1
+#   - 生产环境必须：① 启用 NACOS_AUTH_ENABLE=true ② 设置 NACOS_AUTH_TOKEN（≥32 字节）
+#     ③ 应用端 application.yml 配 nacos.discovery.username/password ④ Nacos 放内网
+#   - 凭据请走 .env 文件，不要硬编码到本文件
+#
+# 注意：此文件只启中间件，应用服务编排见 docker-compose-apps.yml
 # ============================================
 
 services:
@@ -26,7 +32,7 @@ services:
     container_name: minimall-rmq-namesrv
     restart: unless-stopped
     ports:
-      - "9876:9876"
+      - "127.0.0.1:9876:9876"           # 仅本机访问，防止外网探测
     command: sh mqnamesrv
     environment:
       - JAVA_OPT_EXT=-server -Xms256m -Xmx256m -Xmn128m
@@ -48,8 +54,8 @@ services:
     depends_on:
       - rocketmq-namesrv
     ports:
-      - "10909:10909"
-      - "10911:10911"
+      - "127.0.0.1:10909:10909"         # 仅本机访问
+      - "127.0.0.1:10911:10911"         # 仅本机访问
     environment:
       - JAVA_OPT_EXT=-server -Xms256m -Xmx256m -Xmn128m
     volumes:
@@ -73,10 +79,14 @@ services:
     environment:
       - MODE=standalone                    # 单机模式，开发够用
       - PREFER_HOST_MODE=hostname
-      - NACOS_AUTH_ENABLE=false            # 开发模式关闭认证
+      - NACOS_AUTH_ENABLE=${NACOS_AUTH_ENABLE:-false}   # 开发关闭，生产 ${NACOS_AUTH_ENABLE:-true}
+      # 生产环境启用鉴权时需要设置（≥32 字节随机串，openssl rand -base64 48）
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-<YOUR_NACOS_AUTH_TOKEN_256BIT>}
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY:-serverIdentity}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE:-security}
     ports:
-      - "8848:8848"    # HTTP 端口（控制台也是这个）
-      - "9848:9848"    # gRPC 端口（客户端通信）
+      - "127.0.0.1:8848:8848"            # HTTP 端口，仅本机访问
+      - "127.0.0.1:9848:9848"            # gRPC 端口，仅本机访问
     volumes:
       - nacos-data:/home/nacos/data
     networks:
@@ -93,11 +103,11 @@ services:
     container_name: minimall-seata
     restart: unless-stopped
     ports:
-      - "8091:8091"     # Seata 通信端口
-      - "7091:7091"     # Seata 控制台端口
+      - "127.0.0.1:8091:8091"     # Seata 通信端口，仅本机访问
+      - "127.0.0.1:7091:7091"     # Seata 控制台端口，仅本机访问
     environment:
       - SEATA_PORT=8091
-      - STORE_MODE=file                              # 开发单机用 file 存储
+      - STORE_MODE=file                              # 开发单机用 file 存储；生产用 db
       - SEATA_IP=seata-server
     volumes:
       - ./scripts/seata.properties:/seata-server/resources/seata.properties:ro

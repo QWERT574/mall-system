@@ -1,0 +1,12 @@
+# Grafana 数据源配置
+# 自动将 Prometheus 注册为默认数据源，无需手动配置
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy                              # Grafana 后端代理请求，绕过跨域
+    url: http://prometheus:9090                # 容器内网络，服务名即为 hostname
+    isDefault: true
+    editable: true

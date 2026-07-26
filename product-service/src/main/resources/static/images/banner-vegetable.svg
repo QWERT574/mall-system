@@ -1,0 +1,44 @@
+<svg width="800" height="400" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景 -->
+  <defs>
+    <linearGradient id="vegeBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8F5E9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C8E6C9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="800" height="400" fill="url(#vegeBg)"/>
+  
+  <!-- 菜地 -->
+  <rect x="0" y="250" width="800" height="150" fill="#8bc34a"/>
+  
+  <!-- 蔬菜 -->
+  <!-- 胡萝卜 -->
+  <path d="M150 280 L160 350 L140 350 Z" fill="#ff9800"/>
+  <path d="M145 280 L150 260 L155 280 Z" fill="#4caf50"/>
+  
+  <!-- 白菜 -->
+  <ellipse cx="300" cy="300" rx="50" ry="70" fill="#f1f8e9"/>
+  <ellipse cx="280" cy="300" rx="30" ry="60" fill="#dcedc8"/>
+  <ellipse cx="320" cy="300" rx="30" ry="60" fill="#dcedc8"/>
+  <path d="M300 240 L300 280" stroke="#4caf50" stroke-width="4"/>
+  
+  <!-- 西红柿 -->
+  <circle cx="500" cy="290" r="45" fill="#f44336"/>
+  <circle cx="500" cy="245" r="8" fill="#4caf50"/>
+  <path d="M490 245 L500 235 L510 245 Z" fill="#4caf50"/>
+  
+  <!-- 黄瓜 -->
+  <rect x="600" y="280" width="120" height="25" rx="12" fill="#4caf50"/>
+  <circle cx="620" cy="292" r="3" fill="#2d5a2d"/>
+  <circle cx="650" cy="292" r="3" fill="#2d5a2d"/>
+  <circle cx="680" cy="292" r="3" fill="#2d5a2d"/>
+  
+  <!-- 文字 -->
+  <text x="400" y="180" font-family="Arial, sans-serif" font-size="48" fill="#1b3a1b" text-anchor="middle" font-weight="bold">有机蔬菜</text>
+  <text x="400" y="220" font-family="Arial, sans-serif" font-size="24" fill="#2d5a2d" text-anchor="middle">绿色健康，天然有机</text>
+  
+  <!-- 装饰叶子 -->
+  <ellipse cx="100" cy="150" rx="60" ry="25" fill="#8bc34a" opacity="0.6" transform="rotate(-30 100 150)"/>
+  <ellipse cx="700" cy="100" rx="50" ry="20" fill="#8bc34a" opacity="0.6" transform="rotate(45 700 100)"/>
+</svg>

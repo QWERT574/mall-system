@@ -65,18 +65,34 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
             "/api/category/**",
             "/api/activity/**",
             "/api/coupon/public/**",
+            "/api/coupon/list",
+            "/api/coupon/available",
+            "/api/discount/list",
+            "/api/discount/active",
             // 监控端点
             "/actuator/**",
             // 文件访问
             "/uploads/**",
             "/images/**",
-            // AI/FAQ 公开
-            "/api/ai/chat/**",
+            // AI/FAQ 公开（仅客服问答端点；logs/monitor 等管理端点仍需认证）
+            "/api/ai/query",
+            "/api/ai/chat",
+            "/api/ai/rag-query",
+            "/api/ai/rag-chat",
             "/api/faq/**"
     );
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // ── 0. 安全加固：无条件剥离客户端自带的身份头，防止伪造 X-User-Id/X-User-Role 冒充任意用户 ──
+        ServerHttpRequest cleanedRequest = exchange.getRequest().mutate()
+                .headers(h -> {
+                    h.remove("X-User-Id");
+                    h.remove("X-User-Role");
+                })
+                .build();
+        exchange = exchange.mutate().request(cleanedRequest).build();
+
         ServerHttpRequest request = exchange.getRequest();
         String path = request.getURI().getPath();
 
@@ -96,7 +112,7 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
         // ── 3. 校验 Token ──
         try {
             Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(io.jsonwebtoken.io.Decoders.BASE64.decode(jwtSecret))
+                    .setSigningKey(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
@@ -109,11 +125,11 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
             }
 
             // ── 4. 将用户信息注入 Header，传给下游服务 ──
+            // 注：保留 Authorization 头，下游 PermissionInterceptor 需要从 JWT 中解析 userType（0/1/2）
+            // 网关已校验 JWT 合法性，下游不再重复校验签名，仅提取 userType 做角色白名单控制
             ServerHttpRequest mutatedRequest = request.mutate()
                     .header("X-User-Id", String.valueOf(userId))
                     .header("X-User-Role", role != null ? role : "USER")
-                    // 移除 Authorization（下游不需要，安全起见）
-                    .headers(headers -> headers.remove(HttpHeaders.AUTHORIZATION))
                     .build();
 
             log.debug("JWT 校验通过 → userId={}, role={}, path={}", userId, role, path);

@@ -171,7 +171,7 @@ public class AuthController extends BaseController {
             }
 
             // 生成 JWT 令牌
-            String token = jwtUtil.generateToken(user);
+            String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
             // 返回用户信息和令牌
             Map<String, Object> data = new HashMap<>();
@@ -251,7 +251,7 @@ public class AuthController extends BaseController {
             }
 
             // 生成 JWT 令牌
-            String token = jwtUtil.generateToken(user);
+            String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
             // 返回用户信息和令牌
             Map<String, Object> data = new HashMap<>();
@@ -302,7 +302,7 @@ public class AuthController extends BaseController {
             userService.save(user);
 
             // 生成新的 JWT 令牌
-            String token = jwtUtil.generateToken(user);
+            String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
@@ -390,7 +390,7 @@ public class AuthController extends BaseController {
             userService.save(user);
 
             // 生成 JWT 令牌
-            String token = jwtUtil.generateToken(user);
+            String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);

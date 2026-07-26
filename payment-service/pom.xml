@@ -150,6 +150,12 @@
       <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
     </dependency>
 
+    <!-- Sentinel 规则持久化到 Nacos（application.yml 配了 datasource.*.nacos 必须引入） -->
+    <dependency>
+      <groupId>com.alibaba.csp</groupId>
+      <artifactId>sentinel-datasource-nacos</artifactId>
+    </dependency>
+
     <!-- ======================================================= -->
 
     <!-- 公共模块：Result、JWT、枚举、异常、DTO -->

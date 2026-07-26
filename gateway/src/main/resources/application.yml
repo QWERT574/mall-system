@@ -9,71 +9,103 @@ spring:
 
       routes:
 
-
-        # ===== 文件上传/静态资源 =====
-        - id: minimall-uploads
-          uri: lb://chat-service
+        # ===== 静态资源（product-service 有 StaticResourceController + 静态资源目录）=====
+        - id: static-resources
+          uri: lb://product-service
           predicates:
             - Path=/uploads/**, /images/**
 
-        # ===== 监控端点 =====
-        - id: minimall-actuator
+        # ===== 监控端点（暂时集中到 backend，未来各服务独立暴露）=====
+        - id: actuator
           uri: lb://minimall-service
           predicates:
             - Path=/actuator/**
 
-        # ===== WebSocket =====
-        - id: minimall-websocket
-          uri: lb:ws://minimall-service
+        # ===== WebSocket（chat-service 持有 WebSocketConfig + ChatController）=====
+        - id: websocket-chat
+          uri: lb:ws://chat-service
           predicates:
             - Path=/ws-chat/**
 
-        # ===== Phase 2 拆分路由（按服务分流）=====
+        # ===== 拆分路由（按服务分流，精确路径优先）=====
+
+        # 用户域：登录/注册/验证码/用户/地址
         - id: user-service
           uri: lb://user-service
           predicates:
-            - Path=/api/auth/**, /api/user/**, /api/address/**, /api/captcha/**
+            - Path=/api/auth/**, /api/user/**, /api/address/**, /api/captcha/**, /api/sms/**
+
+        # 商品域：商品/分类/活动/优惠券/折扣
         - id: product-service
           uri: lb://product-service
           predicates:
-            - Path=/api/product/**, /api/category/**
+            - Path=/api/product/**, /api/category/**, /api/activity/**, /api/coupon/**, /api/discount/**
+
+        # 订单域：订单/购物车/售后（order-service 实际持有的 controller）
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/api/order/**, /api/cart/**, /api/aftersale/**
 
+        # 商家/评价/上传域：SellerController + ReviewController + UploadController
+        # 注：这些 controller 目前仅存在于 backend 单体（minimall-service），
+        # 待迁入微服务后再切换 uri
+        - id: monolith-seller-review-upload
+          uri: lb://minimall-service
+          predicates:
+            - Path=/api/upload/**, /api/seller/**, /api/review/**
+
+        # 支付域：支付
         - id: payment-service
           uri: lb://payment-service
           predicates:
-            - Path=/api/payment/**, /api/coupon/**, /api/discount/**, /api/activity/**
+            - Path=/api/payment/**
 
+        # 客服域：会话/聊天
         - id: chat-service
           uri: lb://chat-service
           predicates:
-            - Path=/api/cs/**, /api/chat/**, /api/ws/**
+            - Path=/api/cs/**, /api/chat/**
 
+        # 客服管理域：管理员聊天管理/干预（AdminChatController + AdminInterventionController）
+        - id: chat-service-admin
+          uri: lb://chat-service
+          predicates:
+            - Path=/api/admin/chat/**, /api/admin/intervention/**
+
+        # AI 域：AI 客服/FAQ/RAG 知识库
+        # 注：知识库 controller 基路径为 /api/knowledge（KnowledgeBaseController），
+        # /api/rag/** 暂无对应 controller（历史路由，保留不影响）
         - id: ai-service
           uri: lb://ai-service
           predicates:
-            - Path=/api/ai/**, /api/faq/**, /api/rag/**
+            - Path=/api/ai/**, /api/faq/**, /api/rag/**, /api/knowledge/**
 
-        - id: common-uploads
-          uri: lb://chat-service
-          predicates:
-            - Path=/api/upload/**
-
-        - id: seller-review
-          uri: lb://chat-service
-          predicates:
-            - Path=/api/seller/**, /api/review/**
-
-    # ── Sentinel 网关限流（统一在 spring.cloud 下）──
-        # ===== Phase 1 兜底（全部 /api/** → minimall-backend）=====
-        - id: minimall-backend
+        # 系统管理域：仪表盘/配置（SystemController 仅存于 backend 单体）
+        - id: monolith-system
           uri: lb://minimall-service
           predicates:
-            - Path=/api/**
+            - Path=/api/system/**
 
+        # 调试域：调试/重置接口（DebugController + DebugResetController 仅存于 backend 单体）
+        - id: monolith-debug
+          uri: lb://minimall-service
+          predicates:
+            - Path=/api/debug/**
+
+        # 图片服务域：商品图片服务（ImageController 仅存于 backend 单体）
+        - id: monolith-image
+          uri: lb://minimall-service
+          predicates:
+            - Path=/api/image/**
+
+        # 商品分类管理域：product_category 表管理（ProductCategoryController 仅存于 backend 单体）
+        - id: monolith-product-category
+          uri: lb://minimall-service
+          predicates:
+            - Path=/api/product-category/**
+
+    # ── Sentinel 网关限流（统一在 spring.cloud 下）──
     sentinel:
       transport:
         dashboard: ${SENTINEL_DASHBOARD:localhost}:8858
@@ -87,7 +119,7 @@ spring:
 
 # ── JWT 密钥（无默认值，强制从环境变量读取）──
 jwt:
-  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWp3dC1rZXktZm9yLW1pbmltYWxsLWRldi0yMDI0}
+  secret: ${JWT_SECRET}
 
 logging:
   level:

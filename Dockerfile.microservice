@@ -1,0 +1,76 @@
+# ============================================
+#  MiniMall 微服务通用 Dockerfile（多阶段构建）
+#  构建上下文必须为项目根目录（需同时访问 common 与各服务源码）
+#  由 docker-compose-apps.yml 自动调用，一般无需手动执行
+#
+#  手动示例：
+#    docker build -f Dockerfile.microservice \
+#      --build-arg SERVICE_DIR=user-service \
+#      --build-arg SERVER_PORT=8081 \
+#      -t minimall/user-service:latest .
+# ============================================
+
+# ============================================
+#  Stage 1: Maven 构建（含完整 JDK + Maven）
+# ============================================
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+
+# 要构建的服务子目录名（如 user-service / gateway）
+ARG SERVICE_DIR
+
+# 1) 先把 common 模块装进本地 Maven 仓库
+#    所有微服务都依赖 com.example:minimall-common:0.0.1-SNAPSHOT
+COPY common/pom.xml ./common/pom.xml
+COPY common/src ./common/src
+RUN cd common && mvn -B -q install -DskipTests
+
+# 2) 复制目标服务 pom，预取依赖（命中层缓存；改源码时不重新下依赖）
+COPY ${SERVICE_DIR}/pom.xml ./${SERVICE_DIR}/pom.xml
+RUN cd ${SERVICE_DIR} && mvn -B -q dependency:go-offline || true
+
+# 3) 复制源码并打包，把产物统一重命名为 app.jar
+COPY ${SERVICE_DIR}/src ./${SERVICE_DIR}/src
+RUN cd ${SERVICE_DIR} && mvn -B -q -DskipTests package \
+ && JAR_PATH=$(find target -maxdepth 1 -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1) \
+ && cp "$JAR_PATH" /build/app.jar
+
+# ============================================
+#  Stage 2: 运行时（极简 JRE）
+# ============================================
+FROM eclipse-temurin:17-jre-jammy
+
+LABEL maintainer="minimall" \
+      description="MiniMall microservice runtime image"
+
+# 运行端口（构建时注入，用于 EXPOSE 与 HEALTHCHECK）
+ARG SERVER_PORT=8080
+ENV SERVER_PORT=${SERVER_PORT}
+
+WORKDIR /app
+
+# 非 root 用户 + 时区 + ca-certificates（HTTPS 调用如 DeepSeek API 需要）
+RUN groupadd -r app && useradd -r -g app app \
+ && mkdir -p /app/data/uploads /app/logs \
+ && chown -R app:app /app \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+USER app
+COPY --from=builder /build/app.jar app.jar
+
+# JVM 参数：G1GC + 容器内存自适应 + UTF-8 + 快速随机数
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Djava.security.egd=file:/dev/./urandom"
+
+EXPOSE ${SERVER_PORT}
+
+# 健康检查：TCP 端口连通性探测
+# 用 bash /dev/tcp 统一兼容未引入 actuator 的 user-service / product-service
+#（${SERVER_PORT} 在构建时由 ARG 替换为字面端口号写入镜像）
+HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
+  CMD bash -c 'exec 3<>/dev/tcp/127.0.0.1/${SERVER_PORT} && echo ok'
+
+# sh -c 让 $JAVA_OPTS 环境变量能展开
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

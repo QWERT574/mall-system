@@ -1,0 +1,30 @@
+# ============================================
+#  MiniMall Prometheus 监控配置
+#  Prometheus 每 15 秒从 Spring Boot 的 /actuator/prometheus 拉取指标
+# ============================================
+
+global:
+  scrape_interval: 15s       # 每 15 秒抓取一次指标
+  evaluation_interval: 15s   # 每 15 秒评估一次告警规则
+  scrape_timeout: 10s        # 单次抓取超时时间
+
+# 告警规则（可选，后续可扩展 AlertManager）
+rule_files:
+  # - "alert.rules.yml"
+
+# 抓取目标
+scrape_configs:
+  # ============== Spring Boot 后端 ==============
+  - job_name: "minimall-backend"
+    metrics_path: "/actuator/prometheus"  # Spring Boot Micrometer 暴露的 Prometheus 端点
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["backend:8081"]          # docker-compose 内部服务名，容器网络 DNS 自动解析
+        labels:
+          application: "minimall"
+          environment: "docker"
+
+  # ============== Prometheus 自身监控 ==============
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

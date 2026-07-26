@@ -1,0 +1,2 @@
+spring.application.name: chat-service
+spring.cloud.nacos.discovery.server-addr: ${NACOS_HOST:localhost}:8848

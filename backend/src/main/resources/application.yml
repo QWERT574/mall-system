@@ -175,7 +175,7 @@ upload:
 
 # JWT 配置（由 JwtUtil 读取，环境变量可覆盖）
 jwt:
-  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWp3dC1rZXktZm9yLW1pbmltYWxsLWRldi0yMDI0}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 # Spring 文件上传配置

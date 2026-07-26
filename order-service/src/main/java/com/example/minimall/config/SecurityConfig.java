@@ -54,6 +54,8 @@ public class SecurityConfig {
             .and()
             // 配置授权规则（修复后：仅放行真正公开的接口）
             .authorizeRequests()
+                // ===== 内部 API（Feign 服务间调用，不经网关）=====
+                .antMatchers("/api/internal/**").permitAll()
                 // ===== 认证相关（公开） =====
                 .antMatchers("/api/auth/**").permitAll()
                 .antMatchers("/api/captcha/**").permitAll()

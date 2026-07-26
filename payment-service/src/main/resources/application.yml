@@ -17,5 +17,5 @@ mybatis-plus:
     map-underscore-to-camel-case: true
   global-config.db-config: {id-type: auto, logic-delete-field: deleted, logic-delete-value: 1, logic-not-delete-value: 0}
 jwt:
-  secret: ${JWT_SECRET:bXktc3VwZXItc2VjcmV0LWp3dC1rZXktZm9yLW1pbmltYWxsLWRldi0yMDI0}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}

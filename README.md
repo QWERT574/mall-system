@@ -6,6 +6,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Spring_Boot-2.7.9-6DB33F" alt="Spring Boot">
+  <img src="https://img.shields.io/badge/Spring_Cloud-2021.0.9-6DB33F" alt="Spring Cloud">
+  <img src="https://img.shields.io/badge/Nacos-2.2.3-1E6FFF" alt="Nacos">
+  <img src="https://img.shields.io/badge/RocketMQ-4.9.7-D77310" alt="RocketMQ">
   <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js">
   <img src="https://img.shields.io/badge/MyBatis--Plus-3.5.3-1693E6" alt="MyBatis-Plus">
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1" alt="MySQL">
@@ -20,9 +23,12 @@
 
 **乡村振兴** 是一个面向乡村振兴场景的农产品电商平台，采用**前后端分离 + 多端协同**架构，覆盖买家、商家、管理员、客服四类角色。系统包含完整的电商核心（商品/订单/支付/售后/营销），并融合 **RAG 知识库**、**AI 智能客服**、**STOMP 实时聊天**、**可观测性**等进阶能力。
 
+后端已从单体架构演进为 **Spring Cloud 微服务架构**：API 网关（gateway）+ 用户 / 商品 / 订单 / 支付 / 客服 / AI 六个微服务 + 公共模块（common），配套 **Nacos** 注册发现、**RocketMQ** 异步消息、**Seata** 分布式事务、**Sentinel** 网关限流；原单体 `backend/` 仍保留，可独立运行或作为迁移过渡（部分接口由网关路由回单体）。
+
 ### ✨ 核心特性
 
 - 🎯 **多端一体**：Web 商城 (Vue3) + 商家管理端 (Vue3) + 管理后台 (Vue3+TS) + 微信小程序 (原生) + 共享 UI 库
+- 🧩 **微服务架构**：Spring Cloud Gateway 统一入口 + 6 个业务微服务 + Nacos 服务发现 + RocketMQ + Seata + Sentinel
 - 🤖 **AI 智能服务**：DeepSeek-v4-flash + RAG 检索增强 + Embedding 向量语义召回 + 意图分类
 - 💬 **实时通讯**：WebSocket + STOMP + SockJS，支持买家 ↔ 商家 ↔ 客服三方会话
 - 🔐 **完整鉴权**：JWT + Spring Security + 自研 `PermissionInterceptor` 角色白名单
@@ -70,49 +76,69 @@ grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*
 
 ## 🏗️ 系统架构
 
+### 微服务架构（当前主线）
+
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│                          客户端层 (5 个端)                          │
-├──────────────┬──────────────┬──────────────┬───────────┬───────────┤
-│   web-mall   │  seller-web  │   admin-web  │ mini-prog │shared-ui  │
-│  用户商城     │  商家管理     │  后台管理     │ 微信小程序 │共享组件   │
-│   Vue 3      │   Vue 3      │ Vue3 + TS    │ 原生 WXML │ Vue 组件  │
+客户端层 (5 个端)
+┌──────────────┬──────────────┬──────────────┬───────────┬───────────┐
+│   web-mall   │  seller-web  │   admin-web  │ mini-prog │ shared-ui │
+│  用户商城     │  商家管理     │  后台管理     │ 微信小程序 │ 共享组件  │
 │   :5176      │    :5173     │   :3001      │  微信 IDE  │   复用    │
-└──────┬───────┴──────┬───────┴──────┬───────┴─────┬─────┴─────┬─────┘
-       │ HTTP/WS      │ HTTP/WS      │ HTTP/WS     │ HTTPS     │
-       └──────────────┴──────┬───────┴─────────────┴───────────┘
-                             │
-                       Vite Proxy (/api, /uploads, /images, /ws-chat)
-                             │
-                    ┌────────▼────────┐
-                    │   Spring Boot   │  ← :8081
-                    │  Backend 后端   │
-                    │  28 Controllers │
-                    │  42 Services    │
-                    └─┬────────────┬──┘
-                      │            │
-            ┌─────────▼─┐    ┌─────▼──────┐
-            │   MySQL   │    │   Redis    │
-            │  8.0.x    │    │   7.x      │
-            │ minimall  │    │  Lettuce   │
-            └───────────┘    └────────────┘
-                    │
-            ┌───────▼─────────┐
-            │ Spring Boot    │
-            │ Actuator +     │  ← /actuator/health, /actuator/prometheus
-            │ Prometheus     │
-            └────────────────┘
+└──────────────┴───────┬──────┴──────────────┴───────────┴───────────┘
+                       │  HTTP / WebSocket
+              ┌────────▼────────┐
+              │ Spring Cloud    │ ← :8080 统一入口
+              │ Gateway 网关    │ 路由 / CORS / JWT 解析 / Sentinel 限流
+              └────────┬────────┘
+                       │  lb:// (Nacos 服务发现 + 负载均衡)
+┌─────────┬─────────┬─────┴───┬─────────┬─────────┬─────────┐
+│  user   │ product │  order  │ payment │  chat   │   ai    │
+│ -service│ -service│ -service│ -service│ -service│ -service│
+│  :8081  │  :8082  │  :8083  │  :8084  │  :8085  │  :8086  │
+└─────────┴─────────┴────┬────┴─────────┴─────────┴─────────┘
+                        │
+     ┌─────────────────┼──────────────────┐
+┌────▼───────┐ ┌─────▼─────┐ ┌─────────▼───────┐
+│ MySQL 8.0   │ │ Redis 7   │ │ 中间件 (infra)    │
+│ minimall单库│ │ 缓存/限流 │ │ Nacos    :8848    │
+└─────────────┘ └───────────┘ │ RocketMQ :9876    │
+                              │ Seata    :8091    │
+                              └───────────────────┘
 ```
+
+**服务职责划分**（路由规则见 [`gateway/src/main/resources/application.yml`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/gateway/src/main/resources/application.yml)）：
+
+| 服务 | 端口 | 职责（网关路由前缀） |
+|---|---|---|
+| `gateway` | 8080 | 统一入口：路由转发 / CORS / JWT 解析注入 `X-User-Id`/`X-User-Role` / Sentinel 限流 |
+| `user-service` | 8081 | 用户域：`/api/auth` `/api/user` `/api/address` `/api/captcha` `/api/sms` |
+| `product-service` | 8082 | 商品域：`/api/product` `/api/category` `/api/activity` `/api/coupon` `/api/discount` + 静态资源 `/uploads` `/images` |
+| `order-service` | 8083 | 订单域：`/api/order` `/api/cart` `/api/aftersale`（RocketMQ 异步消息 + Seata 分布式事务） |
+| `payment-service` | 8084 | 支付域：`/api/payment` |
+| `chat-service` | 8085 | 客服域：`/api/chat` `/api/cs` `/api/admin/chat` `/api/admin/intervention` + WebSocket `/ws-chat` |
+| `ai-service` | 8086 | AI 域：`/api/ai` `/api/faq` `/api/knowledge`（DeepSeek + RAG） |
+| `common` | - | 公共模块：实体 / 工具 / 统一返回，被各微服务依赖 |
+| `backend`（单体） | 8081 | 以 `minimall-service` 注册到 Nacos，承接尚未迁移的接口（`/api/seller` `/api/review` `/api/upload` `/api/system` `/api/image` 等） |
+
+### 单体架构（保留，可独立运行）
+
+不启中间件时，三个前端通过 Vite Proxy（`/api` `/uploads` `/images` `/ws-chat`）直连单体 `backend`（:8081，29 Controllers / 42 Services），单体直连 MySQL 8.0 + Redis 7，并通过 Actuator + Prometheus 暴露 `/actuator/health` `/actuator/prometheus`。
 
 > **端口速查**：
 > | 服务 | 端口 | 启动入口 |
 > |---|---|---|
-> | Backend | 8081 | `backend/` |
+> | Gateway 网关 | 8080 | `gateway/` |
+> | 微服务 × 6 | 8081~8086 | 各服务目录（见上表） |
+> | Backend（单体） | 8081 | `backend/` |
 > | Admin Web | 3001 | `admin-web/` |
 > | Seller Web | 5173 | `seller-web/` |
 > | Web Mall | 5176 | `web-mall/` |
 > | MySQL | 3306 | docker / 本地 |
 > | Redis | 6379 | docker / 本地 |
+> | Nacos 控制台 | 8848 | `docker-compose-infra.yml` |
+> | RocketMQ NameServer | 9876 | `docker-compose-infra.yml` |
+> | Seata Server | 8091 / 7091 | `docker-compose-infra.yml` |
+> | Sentinel Dashboard | 8858 | 可选组件 |
 
 ---
 
@@ -124,6 +150,12 @@ grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*
 |---|---|---|
 | Java | 8 | 编程语言 |
 | Spring Boot | 2.7.9 | 应用框架 |
+| Spring Cloud | 2021.0.9 | 微服务框架（Gateway / LoadBalancer / Bootstrap） |
+| Spring Cloud Alibaba | 2021.0.5.0 | Nacos 服务发现 + Sentinel 限流 |
+| Nacos | 2.2.3 | 注册中心 + 配置中心 |
+| RocketMQ | 4.9.7 | 异步消息（订单域） |
+| Seata | 1.6.1 | 分布式事务（AT 模式） |
+| Sentinel | - | 网关限流熔断 |
 | Spring Security | 5.7.x | 安全框架 |
 | MyBatis-Plus | 3.5.3.1 | ORM（不用 JPA） |
 | MySQL | 8.0.33 | 关系型数据库 |
@@ -176,7 +208,33 @@ grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*
 
 ## 📦 模块说明
 
-### 1️⃣ backend - 后端服务 [Java/Spring Boot]
+### 0️⃣ 微服务群 - gateway + 6 个业务服务 + common [Java/Spring Cloud]
+
+```
+gateway/            # API 网关（Spring Cloud Gateway + WebFlux，:8080）
+├─ 路由转发（lb:// + Nacos 服务发现）
+├─ JWT 解析 → 注入 X-User-Id / X-User-Role 请求头
+├─ CORS 统一处理
+└─ Sentinel 网关限流（超限返回 429）
+
+user-service/       # 用户域：登录/注册/验证码/地址/角色（:8081）
+product-service/    # 商品域：商品/分类/活动/优惠券/折扣 + 静态资源（:8082）
+order-service/      # 订单域：订单/购物车/售后，RocketMQ + Seata（:8083）
+payment-service/    # 支付域：支付（:8084）
+chat-service/       # 客服域：会话/聊天/WebSocket/人工介入（:8085）
+ai-service/         # AI 域：AI 客服/FAQ/RAG 知识库（:8086）
+common/             # 公共模块：实体/工具/统一返回，先 mvn install 再构建各服务
+```
+
+**关键设计**：
+- 各微服务共享 `minimall` 单库，建表由 `backend/src/main/resources/sql/init_database.sql` 统一初始化
+- 服务间内部调用 `/api/internal/**` 通过 `INTERNAL_TOKEN` 防伪造
+- 上传文件通过共享卷 `app-uploads` 流转：order/user 写入 → product 静态读取 → gateway 转发
+- 镜像统一用根目录 `Dockerfile.microservice` 多阶段构建（`ARG SERVICE_DIR` / `SERVER_PORT` 注入）
+
+---
+
+### 1️⃣ backend - 后端服务（单体，保留） [Java/Spring Boot]
 
 **目录结构：**
 ```
@@ -601,7 +659,21 @@ start-all.bat
 
 启动后会自动打开 3 个浏览器标签页（admin 3001 / seller 5173 / web-mall 5176）。
 
-对应停止：`stop-all.bat`
+对应停止：`stop-all.bat`；重启：`restart-all.bat`
+
+### 🔟 微服务模式启动（可选）
+
+本地非容器方式跑微服务（需先启动 MySQL + Nacos，凭据从 `.env` 加载）：
+
+```powershell
+# 1. 启动中间件（Nacos / RocketMQ / Seata）
+docker compose -f docker-compose-infra.yml up -d
+
+# 2. 批量启动网关 + 6 个微服务（要求 .env 中已配 JWT_SECRET 等）
+powershell -ExecutionPolicy Bypass -File start-microservices.ps1
+```
+
+容器化方式见 [🐳 Docker 部署](#-docker-部署) 的“微服务编排”小节。
 
 ---
 
@@ -610,7 +682,16 @@ start-all.bat
 ```
 mall_system_extended/
 │
-├── backend/                          # 后端（Spring Boot 2.7.9）
+├── gateway/                          # API 网关（Spring Cloud Gateway，:8080）
+├── user-service/                     # 用户微服务（:8081）
+├── product-service/                  # 商品微服务（:8082）
+├── order-service/                    # 订单微服务（:8083，RocketMQ + Seata）
+├── payment-service/                  # 支付微服务（:8084）
+├── chat-service/                     # 客服微服务（:8085，WebSocket）
+├── ai-service/                       # AI 微服务（:8086，DeepSeek + RAG）
+├── common/                           # 微服务公共模块（实体/工具/统一返回）
+│
+├── backend/                          # 后端单体（Spring Boot 2.7.9，保留）
 │   ├── src/main/java/com/example/minimall/
 │   │   ├── MinimaMallApplication.java
 │   │   ├── annotation/ common/ config/ constants/ context/
@@ -667,18 +748,24 @@ mall_system_extended/
 │   ├── SYSTEM_OPTIMIZATION_DOCUMENTATION.md
 │   └── usecase-*.{drawio, png, svg, puml, mmd}   # 5 个用例图
 │
+├── scripts/                          # 运维脚本（seata 配置 / broker.conf / 补表 SQL）
+├── .github/workflows/                # CI/CD：三个前端 GitHub Pages 自动部署
 ├── .devcontainer/                    # VSCode 容器化开发环境
 │   ├── devcontainer.json
 │   ├── docker-compose.yml
 │   └── init.sh
 │
-├── start-all.bat                     # Windows 一键启动（本地开发）
+├── start-all.bat                     # Windows 一键启动（单体本地开发）
 ├── stop-all.bat                      # Windows 一键停止
-├── start-docker.bat                  # Windows Docker 启动
+├── restart-all.bat                   # Windows 一键重启
+├── start-microservices.ps1           # Windows 微服务批量启动（非容器）
+├── start-docker.bat                  # Windows Docker 启动（单体）
 ├── stop-docker.bat                   # Windows Docker 停止
-├── docker-compose.yml                # 根级容器编排（MySQL+Redis+Backend）
+├── docker-compose.yml                # 单体编排（MySQL+Redis+Backend）
+├── docker-compose-infra.yml          # 微服务中间件编排（Nacos+RocketMQ+Seata）
+├── docker-compose-apps.yml           # 微服务应用编排（Gateway+6 微服务）
+├── Dockerfile.microservice           # 微服务统一镜像构建
 ├── .env.example                      # Docker 环境变量模板
-├── 答辩准备.md                       # 毕业答辩 Q&A（113 个高频问题 + 7 大数据流追踪）
 └── README.md                         # 本文件
 ```
 
@@ -696,7 +783,9 @@ http://localhost:8081/swagger-ui/index.html
 
 > **注意**：本项目用 **Springfox 3.0.0**，访问路径是 `/swagger-ui/index.html`（**不是** `/swagger-ui.html`）。
 
-### API 模块清单（共 28 个 Controller）
+### API 模块清单（共 29 个 Controller）
+
+> 微服务模式下，以下接口统一从网关 `http://localhost:8080` 进入，按路径前缀分流到对应服务（见系统架构章节的服务职责划分表）；单体模式下直连 `http://localhost:8081`。
 
 | 模块 | 基础路径 | 主要端点 | 鉴权 |
 |---|---|---|---|
@@ -773,7 +862,7 @@ Content-Type: application/json
 
 ## 🐳 Docker 部署
 
-### 方案 A：compose 一键起（推荐，本地/CI/演示）
+### 方案 A：单体 compose 一键起（推荐，本地/CI/演示）
 
 **前置条件**：已安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（含 docker compose）
 
@@ -851,7 +940,44 @@ docker stats
 docker image prune -f
 ```
 
-### 方案 B：仅构建后端镜像（用宿主 MySQL/Redis）
+### 方案 B：微服务编排（infra + apps 双 compose）
+
+微服务模式分两个编排文件，**必须先启中间件，再启应用**：
+
+```bash
+# 1. 准备 .env（首次），至少填 JWT_SECRET、MYSQL_ROOT_PASSWORD
+cp .env.example .env
+
+# 2. 启中间件：Nacos + RocketMQ + Seata
+docker compose -f docker-compose-infra.yml up -d
+
+# 3. 启应用：MySQL + Redis + Gateway + 6 微服务（首次需 --build）
+docker compose -f docker-compose-apps.yml up -d --build
+
+# 4. 看网关日志
+docker compose -f docker-compose-apps.yml logs -f gateway
+
+# 停止
+docker compose -f docker-compose-apps.yml down
+docker compose -f docker-compose-infra.yml down -v   # 连同中间件数据清除
+```
+
+**访问地址**（端口均绑定 127.0.0.1，仅本机可访问）：
+
+| 入口 | 地址 |
+|---|---|
+| Gateway 统一入口 | http://localhost:8080 |
+| 各微服务直连 | http://localhost:8081 ~ 8086 |
+| Nacos 控制台 | http://localhost:8848/nacos |
+| RocketMQ Dashboard | http://localhost:8088（可选） |
+| Sentinel Dashboard | http://localhost:8858（可选） |
+
+**关键设计点**：
+- 双网络隔离：`minimall-apps-net`（应用+存储）与 `minimall-infra-net`（中间件），微服务同时加入两网
+- 统一镜像构建：`Dockerfile.microservice` 多阶段构建（Maven 预装 common + JRE 精简运行镜像，非 root 用户）
+- 开发环境 Nacos 鉴权关闭且端口绑 127.0.0.1；生产必须启用 `NACOS_AUTH_ENABLE=true` 并设置 `NACOS_AUTH_TOKEN`
+
+### 方案 C：仅构建单体后端镜像（用宿主 MySQL/Redis）
 
 ```bash
 cd backend
@@ -866,7 +992,7 @@ docker run -d --name backend -p 8081:8081 \
   minimall-backend
 ```
 
-### 方案 C：完整生产部署
+### 方案 D：完整生产部署
 
 ```bash
 # 后端 + 三大依赖（MySQL / Redis）走 docker compose
@@ -885,21 +1011,26 @@ cd web-mall  && npm run build
 | 场景 | 推荐 |
 |---|---|
 | 本地开发，需要 HMR | `start-all.bat`（不容器化前端） |
-| 演示 / 答辩 / CI | **方案 A** compose |
-| 服务器只有后端 | 方案 B（用宿主 MySQL/Redis） |
-| 服务器全空 | 方案 C（compose + 前端 nginx） |
+| 演示 / 答辩 / CI | **方案 A** 单体 compose |
+| 微服务完整体验 | **方案 B** infra + apps 双 compose |
+| 服务器只有后端 | 方案 C（用宿主 MySQL/Redis） |
+| 服务器全空 | 方案 D（compose + 前端 nginx） |
 
 ### 文件清单
 
 ```
 .
-├── docker-compose.yml          # 根级编排（MySQL+Redis+Backend）
+├── docker-compose.yml          # 单体编排（MySQL+Redis+Backend）
+├── docker-compose-infra.yml    # 微服务中间件（Nacos+RocketMQ+Seata）
+├── docker-compose-apps.yml     # 微服务应用（MySQL+Redis+Gateway+6 微服务）
+├── Dockerfile.microservice     # 微服务统一多阶段构建（ARG SERVICE_DIR/SERVER_PORT）
 ├── .env.example                # 环境变量模板（不提交真 .env）
 ├── backend/
-│   ├── Dockerfile              # 多阶段构建
+│   ├── Dockerfile              # 单体多阶段构建
 │   └── .dockerignore           # 构建上下文过滤
-├── start-docker.bat            # Windows 启动脚本
-└── stop-docker.bat             # Windows 停止脚本
+├── start-microservices.ps1     # Windows 微服务批量启动（非容器）
+├── start-docker.bat            # Windows 单体 Docker 启动
+└── stop-docker.bat             # Windows 单体 Docker 停止
 ```
 
 ### 故障排查
@@ -1102,6 +1233,18 @@ main               ← 生产稳定
   │   └─ refactor/xxx  ← 重构
 ```
 
+### CI/CD（GitHub Actions）
+
+`.github/workflows/` 下有三个前端自动部署工作流，推送到 `main` 分支且命中对应路径时触发（也支持手动触发）：
+
+| 工作流 | 监听路径 | 部署目标 |
+|---|---|---|
+| `deploy-web-mall.yml` | `web-mall/**` `shared-ui/**` | GitHub Pages |
+| `deploy-seller-web.yml` | `seller-web/**` `shared-ui/**` | GitHub Pages |
+| `deploy-admin-web.yml` | `admin-web/**` `shared-ui/**` | GitHub Pages |
+
+生产 API 地址通过仓库 Secret `VITE_API_BASE_URL` 注入构建。
+
 ### 🧪 测试
 
 | 类型 | 工具 | 位置 |
@@ -1141,8 +1284,6 @@ main               ← 生产稳定
 ### Q4: 商家创建优惠券报"卖家无权访问该接口"（403）？
 
 **A:** 这是 `PermissionInterceptor` 的白名单 bug。已修复：SELLER_COUPON_PATTERN 放行 `POST /api/coupon`、`PUT/DELETE /api/coupon/{id}`。
-
-详见 [`答辩准备.md` 九.1 节](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/%E7%AD%94%E8%BE%A9%E5%87%86%E5%A4%87.md)。
 
 ### Q5: 微信小程序无法请求后端？
 
@@ -1197,7 +1338,6 @@ http://localhost:8081/swagger-ui/index.html
 
 | 文档 | 用途 |
 |---|---|
-| [`答辩准备.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/%E7%AD%94%E8%BE%A9%E5%87%86%E5%A4%87.md) | 毕业答辩 Q&A（113 个高频问题 + 10 大流程图 + 7 大数据流追踪） |
 | [`docs/PERFORMANCE_REPORT.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/PERFORMANCE_REPORT.md) | 性能压测报告（JMeter） |
 | [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/RAG_TECHNICAL_DOCUMENTATION.md) | RAG 技术详解 |
 | [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md) | 系统优化说明 |
@@ -1268,9 +1408,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - [x] RBAC 权限
 - [x] 可观测性（Actuator + Prometheus + TraceId）
 - [x] 一键启动脚本
+- [x] 分布式微服务（Spring Cloud Gateway + Nacos + RocketMQ + Seata + Sentinel）
+- [x] 前端 CI/CD（GitHub Actions 自动部署到 GitHub Pages）
 
 ### 🚧 计划中
-- [ ] 分布式微服务（Spring Cloud）
+- [ ] 单体剩余接口全部迁入微服务（seller / review / upload / system 等）
+- [ ] 微服务按域拆库（当前共享 minimall 单库）
 - [ ] 物流真实 API 对接
 - [ ] 直播带货
 - [ ] 区块链溯源
