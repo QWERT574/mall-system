@@ -1,0 +1,73 @@
+# ============================================
+# Backend (单体 minimall-service) 构建 + 测试
+# 使用 MySQL/Redis 服务容器满足 application-test.yml 的依赖
+# ============================================
+name: Backend tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-test.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      # application-test.yml: localhost:3306 / minimall / root / 123456（仅 CI 测试用途）
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: "123456"
+          MYSQL_DATABASE: minimall
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -p123456"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      # application-test.yml: localhost:6379 无密码, database 1
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+          cache: maven
+
+      - name: Load database schema
+        run: mysql -h127.0.0.1 -uroot -p123456 --default-character-set=utf8mb4 minimall < src/main/resources/sql/init_database.sql
+
+      - name: Run tests
+        run: mvn -B test
