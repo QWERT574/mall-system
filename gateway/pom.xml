@@ -91,6 +91,24 @@
             <artifactId>dotenv-java</artifactId>
             <version>3.0.0</version>
         </dependency>
+
+        <!-- 测试依赖（上下文加载/路由冒烟测试） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.vintage</groupId>
+                    <artifactId>junit-vintage-engine</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

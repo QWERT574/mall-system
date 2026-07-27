@@ -1,3 +1,4 @@
+# syntax=docker.m.daocloud.io/docker/dockerfile:1
 # ============================================
 #  MiniMall 微服务通用 Dockerfile（多阶段构建）
 #  构建上下文必须为项目根目录（需同时访问 common 与各服务源码）
@@ -13,32 +14,39 @@
 # ============================================
 #  Stage 1: Maven 构建（含完整 JDK + Maven）
 # ============================================
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# 使用 daocloud 镜像源（中国大陆网络可直接拉取；其他环境可改回 maven:3.9-eclipse-temurin-17）
+FROM docker.m.daocloud.io/library/maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 
 # 要构建的服务子目录名（如 user-service / gateway）
 ARG SERVICE_DIR
 
+# 可选构建期代理：用于中国大陆/企业网络拉取 Maven 依赖（默认空，不影响其他网络环境）
+# 用法：docker build ... --build-arg MAVEN_PROXY="-Dhttp.proxyHost=host.docker.internal -Dhttp.proxyPort=7897 -Dhttps.proxyHost=host.docker.internal -Dhttps.proxyPort=7897"
+ARG MAVEN_PROXY=""
+ENV MAVEN_OPTS=${MAVEN_PROXY}
+
 # 1) 先把 common 模块装进本地 Maven 仓库
 #    所有微服务都依赖 com.example:minimall-common:0.0.1-SNAPSHOT
 COPY common/pom.xml ./common/pom.xml
 COPY common/src ./common/src
-RUN cd common && mvn -B -q install -DskipTests
+RUN --mount=type=cache,target=/root/.m2/repository cd common && mvn -B -q install -DskipTests
 
 # 2) 复制目标服务 pom，预取依赖（命中层缓存；改源码时不重新下依赖）
 COPY ${SERVICE_DIR}/pom.xml ./${SERVICE_DIR}/pom.xml
-RUN cd ${SERVICE_DIR} && mvn -B -q dependency:go-offline || true
+RUN --mount=type=cache,target=/root/.m2/repository cd ${SERVICE_DIR} && mvn -B -q dependency:go-offline || true
 
 # 3) 复制源码并打包，把产物统一重命名为 app.jar
 COPY ${SERVICE_DIR}/src ./${SERVICE_DIR}/src
-RUN cd ${SERVICE_DIR} && mvn -B -q -DskipTests package \
+RUN --mount=type=cache,target=/root/.m2/repository cd ${SERVICE_DIR} && mvn -B -q -DskipTests package \
  && JAR_PATH=$(find target -maxdepth 1 -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" | head -1) \
  && cp "$JAR_PATH" /build/app.jar
 
 # ============================================
 #  Stage 2: 运行时（极简 JRE）
 # ============================================
-FROM eclipse-temurin:17-jre-jammy
+# 使用 daocloud 镜像源（其他环境可改回 eclipse-temurin:17-jre-jammy）
+FROM docker.m.daocloud.io/library/eclipse-temurin:17-jre-jammy
 
 LABEL maintainer="minimall" \
       description="MiniMall microservice runtime image"
@@ -49,10 +57,14 @@ ENV SERVER_PORT=${SERVER_PORT}
 
 WORKDIR /app
 
+# 可选构建期代理：仅在设置了 APT_PROXY 时用于 apt-get（默认空，不影响其他网络环境）
+ARG APT_PROXY=""
+
 # 非 root 用户 + 时区 + ca-certificates（HTTPS 调用如 DeepSeek API 需要）
 RUN groupadd -r app && useradd -r -g app app \
  && mkdir -p /app/data/uploads /app/logs \
  && chown -R app:app /app \
+ && if [ -n "${APT_PROXY}" ]; then export http_proxy=${APT_PROXY} https_proxy=${APT_PROXY}; fi \
  && apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates tzdata \
  && rm -rf /var/lib/apt/lists/* \
