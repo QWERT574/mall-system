@@ -244,7 +244,8 @@ public class AuthController extends BaseController {
                 user.setUserType(0);
                 user.setStatus(1);
                 user.setNickname("用户" + phone.substring(Math.max(0, phone.length() - 4)));
-                user.setPassword("123456");
+                // 短信注册用户未设置密码：写入一个随机不可用口令并 BCrypt 加密，避免明文弱口令
+                user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
                 userService.save(user);
             } else {
                 if (user.getStatus() != null && user.getStatus() == -1) {

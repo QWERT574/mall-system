@@ -62,14 +62,21 @@ x-microservice-env: &microservice-env
   # ---- JWT（所有服务共享同一密钥）----
   JWT_SECRET: ${JWT_SECRET}
   JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
-  # ---- 内部服务间调用令牌（/api/internal/** 防伪造）----
+  # ---- 内部服务间调用令牌（/api/internal/** 防伪造 + 网关向下游证明身份可信）----
+  # 生产必须在 .env 设为强随机串（openssl rand -base64 32），否则等于关闭了网关信任边界保护
   INTERNAL_TOKEN: ${INTERNAL_TOKEN:-minimall-internal-token-dev}
+  # ---- Spring profile（生产设 prod：自动关闭短信验证码回显等调试行为）----
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+  # ---- CORS 允许源（逗号分隔；本地默认 localhost，生产改为具体前端域名）----
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+  # ---- 短信验证码是否回显（仅本地 true；生产必须 false，防 OTP 泄露）----
+  SMS_EXPOSE_DEV_CODE: ${SMS_EXPOSE_DEV_CODE:-true}
   # ---- Spring ----
   SPRING_SQL_INIT_MODE: never
   # ---- 时区 ----
   TZ: Asia/Shanghai
   # ---- JVM ----
-  JAVA_OPTS: ${JAVA_OPTS:--XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8}
+  JAVA_OPTS: ${JAVA_OPTS:--XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Dcsp.sentinel.log.dir=/app/logs}
 
 # 微服务对 mysql/redis 的健康依赖（等待存储就绪后再启动）
 x-microservice-depends: &microservice-depends
@@ -142,7 +149,6 @@ services:
       --appendonly yes
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD:-}
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     volumes:
@@ -169,6 +175,8 @@ services:
     image: minimall/gateway:latest
     container_name: minimall-gateway
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     ports:
       - "127.0.0.1:8080:8080"
     environment:
@@ -189,6 +197,8 @@ services:
     image: minimall/user-service:latest
     container_name: minimall-user-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8081:8081"
@@ -210,6 +220,8 @@ services:
     image: minimall/product-service:latest
     container_name: minimall-product-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8082:8082"
@@ -232,6 +244,8 @@ services:
     image: minimall/order-service:latest
     container_name: minimall-order-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8083:8083"
@@ -253,6 +267,8 @@ services:
     image: minimall/payment-service:latest
     container_name: minimall-payment-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8084:8084"
@@ -274,6 +290,8 @@ services:
     image: minimall/chat-service:latest
     container_name: minimall-chat-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8085:8085"
@@ -296,6 +314,8 @@ services:
     image: minimall/ai-service:latest
     container_name: minimall-ai-service
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
     depends_on: *microservice-depends
     ports:
       - "127.0.0.1:8086:8086"

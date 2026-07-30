@@ -102,6 +102,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
         "/api/cs/",
         "/api/upload/",
         "/api/review/product/",
+        "/api/seller/public/",
         "/api/debug/",
         "/uploads/",
         "/images/",
@@ -158,11 +159,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 2. 解析 Token 获取用户类型（优先从JWT获取，避免前端User-Type偏移问题）
+        // 2. 解析 Token 获取用户类型（只从校验后的 JWT 派生，杜绝伪造 User-Type 头提权）
         Integer userType = getUserTypeFromJwtToken(request);
-        if (userType == null) {
-            userType = getUserTypeFromHeaders(request);
-        }
 
         // 3. 无 Token 访问非公开接口 → 401
         if (userType == null) {
@@ -251,6 +249,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
             || uri.startsWith("/api/user/update")
             || uri.startsWith("/api/user/change-password")
             || uri.startsWith("/api/user/address")
+            || uri.startsWith("/api/user/upload")
             || uri.startsWith("/api/dashboard/seller")
             || uri.startsWith("/api/statistics/seller")
             || uri.startsWith("/api/system/dashboard/")
@@ -287,6 +286,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
             || uri.startsWith("/api/user/change-password")
             || uri.startsWith("/api/user/address")
             || uri.startsWith("/api/user/preference")
+            || uri.startsWith("/api/user/upload")
             // 注销自己的账号：任何已登录用户都可调用
             || uri.equals("/api/user/deactivate")
             || uri.startsWith("/api/review/create")
@@ -297,21 +297,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
             || uri.startsWith("/api/activity/my")
             || BUYER_COUPON_PATTERN.matcher(uri).matches()
             || BUYER_ID_PATTERN.matcher(uri).matches();
-    }
-
-    /**
-     * 从 User-Type 请求头解析
-     */
-    private Integer getUserTypeFromHeaders(HttpServletRequest request) {
-        String userTypeHeader = request.getHeader("User-Type");
-        if (StringUtils.hasText(userTypeHeader)) {
-            try {
-                return Integer.parseInt(userTypeHeader);
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
     }
 
     /**

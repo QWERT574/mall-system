@@ -3,9 +3,12 @@ package com.example.minimall.service.impl;
 import com.example.minimall.service.SmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -32,9 +35,24 @@ public class SmsServiceImpl implements SmsService {
     private static final Logger logger = LoggerFactory.getLogger(SmsServiceImpl.class);
 
     private final StringRedisTemplate redisTemplate;
+    private final Environment environment;
 
-    public SmsServiceImpl(StringRedisTemplate redisTemplate) {
+    /**
+     * 是否在接口响应中返回验证码（devCode）。
+     * 默认 true 方便本地调试；一旦激活 prod profile 则强制关闭，防止生产泄露 OTP 导致任意账号被接管。
+     */
+    @Value("${sms.expose-dev-code:true}")
+    private boolean exposeDevCodeProp;
+
+    public SmsServiceImpl(StringRedisTemplate redisTemplate, Environment environment) {
         this.redisTemplate = redisTemplate;
+        this.environment = environment;
+    }
+
+    /** 仅当未激活 prod profile 且开关为真时才返回验证码 */
+    private boolean shouldExposeDevCode() {
+        boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        return exposeDevCodeProp && !prod;
     }
 
     /** Redis key 前缀 */
@@ -107,8 +125,10 @@ public class SmsServiceImpl implements SmsService {
         result.put("ok", true);
         result.put("message", "验证码发送成功");
         result.put("expiresIn", TTL_SECONDS);
-        // dev 模式：开发环境把验证码直接返回，方便测试
-        result.put("devCode", code);
+        // 仅非生产环境才回显验证码方便调试；生产（prod profile 或 SMS_EXPOSE_DEV_CODE=false）绝不返回
+        if (shouldExposeDevCode()) {
+            result.put("devCode", code);
+        }
         return result;
     }
 

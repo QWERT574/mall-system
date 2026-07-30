@@ -37,9 +37,14 @@ public class UserContextFilter extends OncePerRequestFilter {
 
     public static final String HEADER_USER_ID = "X-User-Id";
     public static final String HEADER_USER_ROLE = "X-User-Role";
+    public static final String HEADER_INTERNAL_TOKEN = "X-Internal-Token";
 
     private static final ThreadLocal<Long> CURRENT_USER_ID = new ThreadLocal<>();
     private static final ThreadLocal<String> CURRENT_USER_ROLE = new ThreadLocal<>();
+
+    /** 网关注入的内部令牌；仅当请求携带匹配的内部令牌时才信任 X-User-Id 身份头，防止直连伪造 */
+    @org.springframework.beans.factory.annotation.Value("${internal.token:minimall-internal-token-dev}")
+    private String internalToken;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -47,8 +52,11 @@ public class UserContextFilter extends OncePerRequestFilter {
         try {
             String userIdStr = request.getHeader(HEADER_USER_ID);
             String role = request.getHeader(HEADER_USER_ROLE);
+            String tokenHeader = request.getHeader(HEADER_INTERNAL_TOKEN);
 
-            if (userIdStr != null && !userIdStr.isEmpty()) {
+            // 仅当内部令牌匹配时才信任网关注入的 X-User-Id，防止绕过网关直连服务端口伪造身份
+            if (userIdStr != null && !userIdStr.isEmpty()
+                    && internalToken != null && internalToken.equals(tokenHeader)) {
                 Long userId = Long.parseLong(userIdStr);
                 String userRole = role != null ? role : "USER";
                 CURRENT_USER_ID.set(userId);

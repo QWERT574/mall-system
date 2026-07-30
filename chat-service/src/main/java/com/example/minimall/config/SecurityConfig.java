@@ -104,18 +104,18 @@ public class SecurityConfig {
     }
 
     /**
-     * 装配 CORS 配置源：放行本地端口、内网网段，支持凭据与常用 HTTP 方法。
+     * 允许的前端源：本地默认仅 localhost，生产通过环境变量 CORS_ALLOWED_ORIGINS（逗号分隔）收敛为具体域名。
+     */
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+    private String corsAllowedOrigins;
+
+    /**
+     * 装配 CORS 配置源：放行受信任来源，支持凭据与常用 HTTP 方法。
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "http://192.168.*:*",
-            "https://*.github.io",
-            "https://*.onrender.com"
-        ));
+        configuration.setAllowedOriginPatterns(Arrays.asList(corsAllowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-User-Id", "X-User-Role", "X-Trace-Id"));
         configuration.setAllowCredentials(true);

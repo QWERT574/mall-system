@@ -157,11 +157,8 @@ public class PermissionInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 2. 解析 Token 获取用户类型（优先从JWT获取，避免前端User-Type偏移问题）
+        // 2. 解析 Token 获取用户类型（只从校验后的 JWT 派生，杜绝伪造 User-Type 头提权）
         Integer userType = getUserTypeFromJwtToken(request);
-        if (userType == null) {
-            userType = getUserTypeFromHeaders(request);
-        }
 
         // 3. 无 Token 访问非公开接口 → 401
         if (userType == null) {
@@ -296,21 +293,6 @@ public class PermissionInterceptor implements HandlerInterceptor {
             || uri.startsWith("/api/activity/my")
             || BUYER_COUPON_PATTERN.matcher(uri).matches()
             || BUYER_ID_PATTERN.matcher(uri).matches();
-    }
-
-    /**
-     * 从 User-Type 请求头解析
-     */
-    private Integer getUserTypeFromHeaders(HttpServletRequest request) {
-        String userTypeHeader = request.getHeader("User-Type");
-        if (StringUtils.hasText(userTypeHeader)) {
-            try {
-                return Integer.parseInt(userTypeHeader);
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
     }
 
     /**
