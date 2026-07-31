@@ -31,7 +31,7 @@
 - 🧩 **微服务架构**：Spring Cloud Gateway 统一入口 + 6 个业务微服务 + Nacos 服务发现 + RocketMQ + Seata + Sentinel
 - 🤖 **AI 智能服务**：DeepSeek-v4-flash + RAG 检索增强 + Embedding 向量语义召回 + 意图分类
 - 💬 **实时通讯**：WebSocket + STOMP + SockJS，支持买家 ↔ 商家 ↔ 客服三方会话
-- 🔐 **完整鉴权**：JWT + Spring Security + 自研 `PermissionInterceptor` 角色白名单
+- 🔐 **完整鉴权**：JWT + Spring Security + 自研 `PermissionInterceptor` 角色白名单 + `INTERNAL_TOKEN` 信任边界防身份伪造
 - ⚡ **高性能**：Redis 缓存 + HikariCP 连接池 + Thumbnailator 图片压缩 + MyBatis-Plus 分页
 - 📊 **可观测性**：Actuator + Micrometer Prometheus 指标 + TraceId 链路追踪 + 结构化日志
 - 🛡️ **安全防护**：BCrypt 密码哈希 + XSS 过滤 + 图形验证码 + 短信验证码 + 接口限流 (`@RateLimit`)
@@ -44,10 +44,37 @@
 
 ### 必须遵守的规则
 
-1. **本地开发**：复制 `backend/.env.example` → `backend/.env`，填入你自己的密钥
+1. **本地开发**：复制根目录 `.env.example` → `.env`，填入你自己的密钥
 2. **Git 提交**：`.env` 必须加入 `.gitignore`（已默认配置），只提交 `.env.example`
 3. **生产部署**：使用 Docker secrets / K8s Secret / 云平台密钥管理服务
 4. **密钥轮换**：JWT 密钥、admin 密码每 90 天轮换一次
+
+### 🔒 信任边界设计（INTERNAL_TOKEN）
+
+微服务架构下，所有外部请求必须经过 Gateway 网关。网关在转发请求时注入 `X-User-Id` / `X-User-Role` 请求头，下游服务信任这些头来识别调用者身份。
+
+**风险**：攻击者可以绕过网关，直连微服务端口（:8081~:8086），伪造 `X-User-Id: 1` 冒充管理员。
+
+**防御**：网关与所有微服务共享 `INTERNAL_TOKEN`（环境变量）。网关注入身份头时同步携带此令牌，下游 `UserContextFilter` 校验令牌匹配后才信任身份头，否则丢弃伪造的身份头。
+
+```
+客户端 ──→ Gateway ──→ 微服务
+           │             │
+           │ 注入:        │ 校验:
+           │ X-User-Id   │ INTERNAL_TOKEN 匹配？
+           │ X-User-Role │   ✅ → 信任身份头
+           │ INTERNAL_TOKEN │   ❌ → 丢弃，视为匿名
+```
+
+> ⚠️ **生产环境**必须在 `.env` 中将 `INTERNAL_TOKEN` 设为强随机串（`openssl rand -base64 32`），使用默认值 `minimall-internal-token-dev` 等于关闭保护。
+
+### 生产环境开关
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | 空 | 设为 `prod` 自动关闭短信验证码回显等调试行为 |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:*,http://127.0.0.1:*` | CORS 允许源（逗号分隔），生产必须改为具体前端域名 |
+| `SMS_EXPOSE_DEV_CODE` | `true` | 短信验证码是否回显，**生产必须 `false`**（防 OTP 泄露） |
 
 ### 占位符规范
 
@@ -59,7 +86,8 @@ README 中所有 `<YOUR_*>` 形式的占位符都表示**你必须替换的密�
 | `<YOUR_REDIS_PASSWORD_OR_EMPTY>` | Redis 密码 | `redis-cli config set requirepass <pwd>` |
 | `<YOUR_DEEPSEEK_API_KEY>` | DeepSeek 平台 Key | https://platform.deepseek.com |
 | `<YOUR_EMBEDDING_API_KEY>` | OpenAI 兼容的 Embedding Key | https://platform.openai.com |
-| `<YOUR_256BIT_RANDOM_SECRET>` | JWT 签名密钥 | `openssl rand -base64 64` |
+| `<YOUR_256BIT_RANDOM_SECRET>` | JWT 签名密钥 | `openssl rand -base64 32` |
+| `<YOUR_INTERNAL_TOKEN>` | 内部服务间调用令牌 | `openssl rand -base64 32` |
 | `<INITIAL_PASSWORD>` | admin 初始密码 | `.env.example` 中查找或 `start-all.bat` 启动日志 |
 | `<BCRYPT_HASH_OF_NEW_PASSWORD>` | BCrypt 密码哈希 | https://bcrypt-generator.com 生成 |
 
@@ -106,18 +134,18 @@ grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*
                               └───────────────────┘
 ```
 
-**服务职责划分**（路由规则见 [`gateway/src/main/resources/application.yml`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/gateway/src/main/resources/application.yml)）：
+**服务职责划分**（路由规则见 [`gateway/src/main/resources/application.yml`](gateway/src/main/resources/application.yml)）：
 
 | 服务 | 端口 | 职责（网关路由前缀） |
 |---|---|---|
-| `gateway` | 8080 | 统一入口：路由转发 / CORS / JWT 解析注入 `X-User-Id`/`X-User-Role` / Sentinel 限流 |
+| `gateway` | 8080 | 统一入口：路由转发 / CORS（`CORS_ALLOWED_ORIGINS` 可配）/ JWT 解析注入 `X-User-Id`/`X-User-Role` + `INTERNAL_TOKEN` 信任令牌 / Sentinel 限流 |
 | `user-service` | 8081 | 用户域：`/api/auth` `/api/user` `/api/address` `/api/captcha` `/api/sms` |
 | `product-service` | 8082 | 商品域：`/api/product` `/api/category` `/api/activity` `/api/coupon` `/api/discount` + 静态资源 `/uploads` `/images` |
 | `order-service` | 8083 | 订单域：`/api/order` `/api/cart` `/api/aftersale`（RocketMQ 异步消息 + Seata 分布式事务） |
 | `payment-service` | 8084 | 支付域：`/api/payment` |
 | `chat-service` | 8085 | 客服域：`/api/chat` `/api/cs` `/api/admin/chat` `/api/admin/intervention` + WebSocket `/ws-chat` |
 | `ai-service` | 8086 | AI 域：`/api/ai` `/api/faq` `/api/knowledge`（DeepSeek + RAG） |
-| `common` | - | 公共模块：实体 / 工具 / 统一返回，被各微服务依赖 |
+| `common` | — | 公共模块：实体 / 工具 / 统一返回，被各微服务依赖 |
 | `backend`（单体） | 8081 | 以 `minimall-service` 注册到 Nacos，承接尚未迁移的接口（`/api/seller` `/api/review` `/api/upload` `/api/system` `/api/image` 等） |
 
 ### 单体架构（保留，可独立运行）
@@ -282,7 +310,7 @@ backend/
 │   ├── static/images/              # 静态资源
 │   ├── application.yml             # 主配置（环境变量驱动）
 │   └── logback-spring.xml          # 日志配置
-├── src/test/                       # 单元 + 集成测试（JUnit 5 + Mockito + H2）
+├── src/test/                       # 单元 + 集成测试（JUnit 5 + Mockito + MySQL）
 ├── pom.xml                         # Maven
 ├── Dockerfile                      # Docker 镜像构建
 ├── api_test.ps1                    # PowerShell API 烟测脚本
@@ -571,44 +599,43 @@ docker run -d --name redis -p 6379:6379 redis:7-alpine
 
 ### 4️⃣ 配置环境变量
 
-在 `backend/` 下复制 `.env.example` 为 `.env`：
+在项目**根目录**复制 `.env.example` 为 `.env`（单体和微服务共用同一份）：
 
 ```bash
-cd backend
 cp .env.example .env
 # 编辑 .env，填入真实密码和 API Key
 ```
 
-`.env` 内容模板（**所有值仅作占位示例，请替换为你自己的密钥后提交**）：
+`.env` 关键配置项（**所有值仅作占位示例，请替换为你自己的密钥**）：
+
 ```env
-# 数据库
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=minimall
-DB_USERNAME=root
-DB_PASSWORD=<YOUR_DB_PASSWORD>             # ← 改为你的 MySQL 密码
+# ---- 数据库 ----
+MYSQL_ROOT_PASSWORD=<YOUR_DB_PASSWORD>       # ← MySQL root 密码
+MYSQL_PORT=3306
+MYSQL_DATABASE=minimall
 
-# Redis
-REDIS_HOST=localhost
+# ---- Redis ----
+REDIS_HOST=redis                             # Docker 内用服务名；本地开发改为 localhost
 REDIS_PORT=6379
-REDIS_PASSWORD=<YOUR_REDIS_PASSWORD_OR_EMPTY>
-REDIS_DATABASE=0
+REDIS_PASSWORD=                              # 留空=无密码
 
-# 服务端口
-SERVER_PORT=8081
-
-# DeepSeek AI（必填，否则 AI 走降级）
-DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY>   # ← 从 https://platform.deepseek.com 申请
-
-# Embedding（用于 RAG，可选）
-EMBEDDING_API_URL=https://api.openai.com/v1/embeddings
-EMBEDDING_API_KEY=<YOUR_EMBEDDING_API_KEY> # ← 与 OpenAI 兼容的 Embedding Key
-EMBEDDING_MODEL=text-embedding-3-small
-EMBEDDING_DIMENSIONS=1536
-
-# JWT
-JWT_SECRET=<YOUR_256BIT_RANDOM_SECRET>     # ← 用 openssl rand -base64 64 生成
+# ---- JWT（必填，所有服务共享同一密钥）----
+JWT_SECRET=<YOUR_256BIT_RANDOM_SECRET>       # ← openssl rand -base64 32
 JWT_EXPIRATION=86400000
+
+# ---- 内部服务间调用令牌（必填，微服务信任边界）----
+INTERNAL_TOKEN=<YOUR_INTERNAL_TOKEN>         # ← openssl rand -base64 32
+
+# ---- DeepSeek AI（必填，否则 AI 走降级）----
+DEEPSEEK_API_KEY=<YOUR_DEEPSEEK_API_KEY>    # ← 从 https://platform.deepseek.com 申请
+
+# ---- Embedding（用于 RAG，可选）----
+EMBEDDING_API_KEY=                           # 留空 → 走本地 TF-IDF 降级
+
+# ---- 生产环境开关（本地留空即可）----
+# SPRING_PROFILES_ACTIVE=prod               # 自动关闭短信回显等调试行为
+# CORS_ALLOWED_ORIGINS=https://your-domain  # 生产改为具体前端域名
+# SMS_EXPOSE_DEV_CODE=false                 # 生产必须 false（防 OTP 泄露）
 ```
 
 ### 5️⃣ 启动后端
@@ -750,8 +777,13 @@ mall_system_extended/
 │   ├── SYSTEM_OPTIMIZATION_DOCUMENTATION.md
 │   └── usecase-*.{drawio, png, svg, puml, mmd}   # 5 个用例图
 │
-├── scripts/                          # 运维脚本（seata 配置 / broker.conf / 补表 SQL）
-├── .github/workflows/                # CI/CD：三个前端 GitHub Pages 自动部署
+├── scripts/                          # 运维脚本（seata 配置 / broker.conf / 补表 SQL / K8s 部署）
+│   ├── k8s-deploy.ps1                  # K8s 一键部署（读 .env + 建 mysql-init ConfigMap + helm upgrade）
+│   ├── k8s-pull-images.ps1             # K8s 镜像拉取辅助
+│   └── seata.properties                # Seata Server 配置
+├── k8s/                              # Helm Chart（K8s 微服务部署，与 compose 等价）
+│   └── minimall/                       # Chart.yaml / values.yaml / templates/
+├── .github/workflows/                # CI/CD：三个前端 GitHub Pages 自动部署 + 后端测试
 ├── .devcontainer/                    # VSCode 容器化开发环境
 │   ├── devcontainer.json
 │   ├── docker-compose.yml
@@ -922,6 +954,7 @@ stop-docker.bat        :: 停止
 - ✅ **Spring Profile = `docker`**：可通过此 profile 区分本地和容器内配置
 - ✅ **JVM 调优**：`MaxRAMPercentage=75.0` 让容器自适应内存（不用写死 -Xmx）
 - ✅ **非 root 运行**：容器内用 `app` 用户启动
+- ✅ **seccomp 安全**：MySQL 和后端容器设置 `seccomp:unconfined` 以兼容 Docker Desktop for Windows 的 `clone3` 系统调用限制
 
 ### 常见操作
 
@@ -1008,6 +1041,25 @@ cd web-mall  && npm run build
 # Nginx 反代配置参考 .devcontainer/init.sh
 ```
 
+### 方案 E：K8s 部署（Helm，微服务路径同构）
+
+项目提供 Helm Chart（`k8s/minimall/`），与双 compose 文件等价：MySQL/Redis/Nacos/RocketMQ/Seata + Gateway（NodePort 30080）+ 6 微服务。
+
+```powershell
+# 一键部署到本地集群（Docker Desktop K8s / minikube / kind）
+.\scripts\k8s-deploy.ps1                 # 部署/升级，namespace=minimall
+.\scripts\k8s-deploy.ps1 -Uninstall      # 卸载（保留 PVC）
+
+# 手动方式
+helm upgrade --install minimall k8s/minimall -n minimall --set secrets.jwtSecret=<...>
+```
+
+**关键设计**：
+- 镜像复用 compose 构建的 `minimall/*:latest`（需先 `docker compose -f docker-compose-apps.yml build`）
+- 建表 SQL 由部署脚本从 `backend/.../init_database.sql` 生成外部 ConfigMap `minimall-mysql-init`
+- 服务寻址靠 `NACOS_HOST=minimall-nacos` 等 Service DNS 环境变量注入，无需改任何业务代码
+- 入口 NodePort 30080 或 `kubectl port-forward svc/minimall-gateway 8080:8080`
+
 ### 方案选择指南
 
 | 场景 | 推荐 |
@@ -1017,6 +1069,7 @@ cd web-mall  && npm run build
 | 微服务完整体验 | **方案 B** infra + apps 双 compose |
 | 服务器只有后端 | 方案 C（用宿主 MySQL/Redis） |
 | 服务器全空 | 方案 D（compose + 前端 nginx） |
+| K8s 部署演练 / 探针验证 | **方案 E** Helm Chart |
 
 ### 文件清单
 
@@ -1030,6 +1083,13 @@ cd web-mall  && npm run build
 ├── backend/
 │   ├── Dockerfile              # 单体多阶段构建
 │   └── .dockerignore           # 构建上下文过滤
+├── k8s/minimall/               # Helm Chart（K8s 微服务部署）
+│   ├── Chart.yaml
+│   ├── values.yaml
+│   └── templates/
+├── scripts/
+│   ├── k8s-deploy.ps1          # K8s 一键部署脚本
+│   └── seata.properties        # Seata 配置
 ├── start-microservices.ps1     # Windows 微服务批量启动（非容器）
 ├── start-docker.bat            # Windows 单体 Docker 启动
 └── stop-docker.bat             # Windows 单体 Docker 停止
@@ -1087,7 +1147,7 @@ cd web-mall  && npm run build
 | `system_config` | 系统配置 | id, key, value |
 | `service_record` | 服务记录 | id, user_id, type, content |
 
-> 完整建表 SQL 见 [`backend/src/main/resources/sql/schema.sql`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/backend/src/main/resources/sql/schema.sql) 和 [`init_database.sql`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/backend/src/main/resources/sql/init_database.sql)
+> 完整建表 SQL 见 [`backend/src/main/resources/sql/schema.sql`](backend/src/main/resources/sql/schema.sql) 和 [`init_database.sql`](backend/src/main/resources/sql/init_database.sql)
 
 ---
 
@@ -1153,7 +1213,7 @@ rag:
 - 没配 `EMBEDDING_API_KEY` → 用本地 TF-IDF 降级
 - RAG 关（`rag.enabled: false`）→ 直接调 DeepSeek
 
-详见 [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/RAG_TECHNICAL_DOCUMENTATION.md)
+详见 [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](docs/RAG_TECHNICAL_DOCUMENTATION.md)
 
 ---
 
@@ -1180,7 +1240,7 @@ scrape_configs:
       - targets: ['localhost:8081']
 ```
 
-详见 [`docs/PERFORMANCE_REPORT.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/PERFORMANCE_REPORT.md) 和 [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md)
+详见 [`docs/PERFORMANCE_REPORT.md`](docs/PERFORMANCE_REPORT.md) 和 [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md)
 
 ---
 
@@ -1252,7 +1312,7 @@ main               ← 生产稳定
 | 类型 | 工具 | 位置 |
 |---|---|---|
 | 单元测试 | JUnit 5 + Mockito | `backend/src/test/java/com/example/minimall/**/*Test.java` |
-| 集成测试 | SpringBootTest + H2 内存库 | `backend/src/test/java/.../integration/` |
+| 集成测试 | SpringBootTest + MySQL | `backend/src/test/java/.../integration/` |
 | WebSocket 端到端 | STOMP 客户端模拟 | `ChatMessageDeliveryE2ETest` |
 | API 烟测（手动） | PowerShell | `backend/api_test.ps1` |
 | 监控指标 | Micrometer Prometheus | `/actuator/prometheus` |
@@ -1324,15 +1384,36 @@ http://localhost:8081/swagger-ui/index.html
 
 ### Q9: 日志全是乱码？
 
-**A:** Windows 下 `start-all.bat` 默认 `chcp 936` (GBK)，但项目文件是 UTF-8。改 bat 第一行 `chcp 65001` 即可。详见 [`start-all.bat`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/start-all.bat)。
+**A:** Windows 下 `start-all.bat` 默认 `chcp 936` (GBK)，但项目文件是 UTF-8。改 bat 第一行 `chcp 65001` 即可。详见 [`start-all.bat`](start-all.bat)。
 
 ### Q10: 如何切到生产环境？
 
 **A:**
 1. 后端打包：`mvn clean package -DskipTests`，丢给 Docker / 服务器
 2. 前端：`npm run build`，产物 `dist/` 部署到 Nginx
-3. 修改 `application.yml` 中的生产配置（数据库、Redis、AI Key）
-4. 配 HTTPS 证书（小程序强制要求）
+3. 修改 `.env`：`SPRING_PROFILES_ACTIVE=prod`，`SMS_EXPOSE_DEV_CODE=false`，`CORS_ALLOWED_ORIGINS=https://your-domain`
+4. `INTERNAL_TOKEN` 和 `JWT_SECRET` 改为强随机串（`openssl rand -base64 32`）
+5. Nacos 鉴权开启：`NACOS_AUTH_ENABLE=true` + `NACOS_AUTH_TOKEN`
+6. 配 HTTPS 证书（小程序强制要求）
+
+### Q11: 微服务启动后 Nacos 控制台看不到服务？
+
+**A:**
+1. 确认 `docker-compose-infra.yml` 已启动：`docker compose -f docker-compose-infra.yml ps`
+2. 检查 Nacos 是否健康：`curl http://localhost:8848/nacos/v1/console/health/readiness`
+3. 微服务日志搜 `nacos` 关键字：`docker compose -f docker-compose-apps.yml logs user-service | grep -i nacos`
+4. 网络问题：微服务必须加入 `minimall-infra-net`（`docker-compose-apps.yml` 已配置）
+
+### Q12: 微服务间调用 401/403？
+
+**A:** 检查 `INTERNAL_TOKEN` 是否一致。所有微服务（含 gateway）必须使用同一个 `INTERNAL_TOKEN` 值。默认值 `minimall-internal-token-dev` 仅限本地开发。
+
+### Q13: Gateway 路由 503（Service Unavailable）？
+
+**A:**
+1. 目标服务是否注册到 Nacos：访问 `http://localhost:8848/nacos` 查看服务列表
+2. 服务是否健康：`docker compose -f docker-compose-apps.yml ps` 检查容器状态
+3. 路由配置：检查 `gateway/src/main/resources/application.yml` 中 `uri: lb://service-name` 是否与 Nacos 注册名一致
 
 ---
 
@@ -1340,10 +1421,10 @@ http://localhost:8081/swagger-ui/index.html
 
 | 文档 | 用途 |
 |---|---|
-| [`docs/PERFORMANCE_REPORT.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/PERFORMANCE_REPORT.md) | 性能压测报告（JMeter） |
-| [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/RAG_TECHNICAL_DOCUMENTATION.md) | RAG 技术详解 |
-| [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md) | 系统优化说明 |
-| [`docs/usecase-*.svg`](file:///e:/%E8%BF%85%E9%9B%B7%E4%B8%8B%E8%BD%BD/mall_system_extended/docs/) | 5 个用例图（订单/商品/用户/AI/售后） |
+| [`docs/PERFORMANCE_REPORT.md`](docs/PERFORMANCE_REPORT.md) | 性能压测报告（JMeter） |
+| [`docs/RAG_TECHNICAL_DOCUMENTATION.md`](docs/RAG_TECHNICAL_DOCUMENTATION.md) | RAG 技术详解 |
+| [`docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md`](docs/SYSTEM_OPTIMIZATION_DOCUMENTATION.md) | 系统优化说明 |
+| [`docs/usecase-*.svg`](docs/) | 5 个用例图（订单/商品/用户/AI/售后） |
 
 ---
 
@@ -1411,6 +1492,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
 - [x] 可观测性（Actuator + Prometheus + TraceId）
 - [x] 一键启动脚本
 - [x] 分布式微服务（Spring Cloud Gateway + Nacos + RocketMQ + Seata + Sentinel）
+- [x] 信任边界加固（INTERNAL_TOKEN 防身份伪造）
+- [x] K8s 部署（Helm Chart + 一键脚本）
 - [x] 前端 CI/CD（GitHub Actions 自动部署到 GitHub Pages）
 
 ### 🚧 计划中
