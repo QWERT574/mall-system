@@ -1,9 +1,13 @@
 ﻿/* ============================================================
-   乡村振兴 间距工具类 v1.0
-   基于 4px 基准的 margin / padding 工具类
+   乡村振兴 间距工具类 v1.1
+   基于 4px 基准的 margin / padding / gap / stack 工具类
+   v1.1 更新（2026-07-26）：
+   1. 补全刻度：主方向覆盖 0–16（0,1,2,3,4,5,6,8,10,12,16）
+   2. 补齐轴向：mx/my/pl/pr 全刻度
+   3. 新增 ml-stack-* 垂直节奏工具（子元素间距，优于逐个写 margin）
    ============================================================ */
 
-/* Margin */
+/* ---------- Margin ---------- */
 .ml-m-0  { margin: var(--spacing-0); }
 .ml-m-1  { margin: var(--spacing-1); }
 .ml-m-2  { margin: var(--spacing-2); }
@@ -13,6 +17,8 @@
 .ml-m-6  { margin: var(--spacing-6); }
 .ml-m-8  { margin: var(--spacing-8); }
 .ml-m-10 { margin: var(--spacing-10); }
+.ml-m-12 { margin: var(--spacing-12); }
+.ml-m-16 { margin: var(--spacing-16); }
 
 .ml-mt-0  { margin-top: var(--spacing-0); }
 .ml-mt-1  { margin-top: var(--spacing-1); }
@@ -23,6 +29,8 @@
 .ml-mt-6  { margin-top: var(--spacing-6); }
 .ml-mt-8  { margin-top: var(--spacing-8); }
 .ml-mt-10 { margin-top: var(--spacing-10); }
+.ml-mt-12 { margin-top: var(--spacing-12); }
+.ml-mt-16 { margin-top: var(--spacing-16); }
 
 .ml-mb-0  { margin-bottom: var(--spacing-0); }
 .ml-mb-1  { margin-bottom: var(--spacing-1); }
@@ -33,20 +41,49 @@
 .ml-mb-6  { margin-bottom: var(--spacing-6); }
 .ml-mb-8  { margin-bottom: var(--spacing-8); }
 .ml-mb-10 { margin-bottom: var(--spacing-10); }
+.ml-mb-12 { margin-bottom: var(--spacing-12); }
+.ml-mb-16 { margin-bottom: var(--spacing-16); }
 
 .ml-ml-0  { margin-left: var(--spacing-0); }
+.ml-ml-1  { margin-left: var(--spacing-1); }
 .ml-ml-2  { margin-left: var(--spacing-2); }
+.ml-ml-3  { margin-left: var(--spacing-3); }
 .ml-ml-4  { margin-left: var(--spacing-4); }
+.ml-ml-5  { margin-left: var(--spacing-5); }
 .ml-ml-6  { margin-left: var(--spacing-6); }
+.ml-ml-8  { margin-left: var(--spacing-8); }
+.ml-ml-10 { margin-left: var(--spacing-10); }
 
 .ml-mr-0  { margin-right: var(--spacing-0); }
+.ml-mr-1  { margin-right: var(--spacing-1); }
 .ml-mr-2  { margin-right: var(--spacing-2); }
+.ml-mr-3  { margin-right: var(--spacing-3); }
 .ml-mr-4  { margin-right: var(--spacing-4); }
+.ml-mr-5  { margin-right: var(--spacing-5); }
 .ml-mr-6  { margin-right: var(--spacing-6); }
+.ml-mr-8  { margin-right: var(--spacing-8); }
+.ml-mr-10 { margin-right: var(--spacing-10); }
 
+.ml-mx-0 { margin-left: var(--spacing-0); margin-right: var(--spacing-0); }
+.ml-mx-1 { margin-left: var(--spacing-1); margin-right: var(--spacing-1); }
+.ml-mx-2 { margin-left: var(--spacing-2); margin-right: var(--spacing-2); }
+.ml-mx-3 { margin-left: var(--spacing-3); margin-right: var(--spacing-3); }
+.ml-mx-4 { margin-left: var(--spacing-4); margin-right: var(--spacing-4); }
+.ml-mx-5 { margin-left: var(--spacing-5); margin-right: var(--spacing-5); }
+.ml-mx-6 { margin-left: var(--spacing-6); margin-right: var(--spacing-6); }
+.ml-mx-8 { margin-left: var(--spacing-8); margin-right: var(--spacing-8); }
 .ml-mx-auto { margin-left: auto; margin-right: auto; }
 
-/* Padding */
+.ml-my-0 { margin-top: var(--spacing-0); margin-bottom: var(--spacing-0); }
+.ml-my-1 { margin-top: var(--spacing-1); margin-bottom: var(--spacing-1); }
+.ml-my-2 { margin-top: var(--spacing-2); margin-bottom: var(--spacing-2); }
+.ml-my-3 { margin-top: var(--spacing-3); margin-bottom: var(--spacing-3); }
+.ml-my-4 { margin-top: var(--spacing-4); margin-bottom: var(--spacing-4); }
+.ml-my-5 { margin-top: var(--spacing-5); margin-bottom: var(--spacing-5); }
+.ml-my-6 { margin-top: var(--spacing-6); margin-bottom: var(--spacing-6); }
+.ml-my-8 { margin-top: var(--spacing-8); margin-bottom: var(--spacing-8); }
+
+/* ---------- Padding ---------- */
 .ml-p-0  { padding: var(--spacing-0); }
 .ml-p-1  { padding: var(--spacing-1); }
 .ml-p-2  { padding: var(--spacing-2); }
@@ -56,26 +93,81 @@
 .ml-p-6  { padding: var(--spacing-6); }
 .ml-p-8  { padding: var(--spacing-8); }
 .ml-p-10 { padding: var(--spacing-10); }
+.ml-p-12 { padding: var(--spacing-12); }
+.ml-p-16 { padding: var(--spacing-16); }
 
+.ml-pt-0 { padding-top: var(--spacing-0); }
+.ml-pt-1 { padding-top: var(--spacing-1); }
+.ml-pt-2 { padding-top: var(--spacing-2); }
+.ml-pt-3 { padding-top: var(--spacing-3); }
 .ml-pt-4 { padding-top: var(--spacing-4); }
+.ml-pt-5 { padding-top: var(--spacing-5); }
 .ml-pt-6 { padding-top: var(--spacing-6); }
 .ml-pt-8 { padding-top: var(--spacing-8); }
 
+.ml-pb-0 { padding-bottom: var(--spacing-0); }
+.ml-pb-1 { padding-bottom: var(--spacing-1); }
+.ml-pb-2 { padding-bottom: var(--spacing-2); }
+.ml-pb-3 { padding-bottom: var(--spacing-3); }
 .ml-pb-4 { padding-bottom: var(--spacing-4); }
+.ml-pb-5 { padding-bottom: var(--spacing-5); }
 .ml-pb-6 { padding-bottom: var(--spacing-6); }
 .ml-pb-8 { padding-bottom: var(--spacing-8); }
 
+.ml-pl-0 { padding-left: var(--spacing-0); }
+.ml-pl-1 { padding-left: var(--spacing-1); }
+.ml-pl-2 { padding-left: var(--spacing-2); }
+.ml-pl-3 { padding-left: var(--spacing-3); }
+.ml-pl-4 { padding-left: var(--spacing-4); }
+.ml-pl-5 { padding-left: var(--spacing-5); }
+.ml-pl-6 { padding-left: var(--spacing-6); }
+.ml-pl-8 { padding-left: var(--spacing-8); }
+
+.ml-pr-0 { padding-right: var(--spacing-0); }
+.ml-pr-1 { padding-right: var(--spacing-1); }
+.ml-pr-2 { padding-right: var(--spacing-2); }
+.ml-pr-3 { padding-right: var(--spacing-3); }
+.ml-pr-4 { padding-right: var(--spacing-4); }
+.ml-pr-5 { padding-right: var(--spacing-5); }
+.ml-pr-6 { padding-right: var(--spacing-6); }
+.ml-pr-8 { padding-right: var(--spacing-8); }
+
+.ml-px-0 { padding-left: var(--spacing-0); padding-right: var(--spacing-0); }
+.ml-px-1 { padding-left: var(--spacing-1); padding-right: var(--spacing-1); }
+.ml-px-2 { padding-left: var(--spacing-2); padding-right: var(--spacing-2); }
+.ml-px-3 { padding-left: var(--spacing-3); padding-right: var(--spacing-3); }
 .ml-px-4 { padding-left: var(--spacing-4); padding-right: var(--spacing-4); }
+.ml-px-5 { padding-left: var(--spacing-5); padding-right: var(--spacing-5); }
 .ml-px-6 { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
 .ml-px-8 { padding-left: var(--spacing-8); padding-right: var(--spacing-8); }
 
+.ml-py-0 { padding-top: var(--spacing-0); padding-bottom: var(--spacing-0); }
+.ml-py-1 { padding-top: var(--spacing-1); padding-bottom: var(--spacing-1); }
 .ml-py-2 { padding-top: var(--spacing-2); padding-bottom: var(--spacing-2); }
+.ml-py-3 { padding-top: var(--spacing-3); padding-bottom: var(--spacing-3); }
 .ml-py-4 { padding-top: var(--spacing-4); padding-bottom: var(--spacing-4); }
+.ml-py-5 { padding-top: var(--spacing-5); padding-bottom: var(--spacing-5); }
 .ml-py-6 { padding-top: var(--spacing-6); padding-bottom: var(--spacing-6); }
+.ml-py-8 { padding-top: var(--spacing-8); padding-bottom: var(--spacing-8); }
 
-/* Gap */
-.ml-gap-2 { gap: var(--spacing-2); }
-.ml-gap-3 { gap: var(--spacing-3); }
-.ml-gap-4 { gap: var(--spacing-4); }
-.ml-gap-6 { gap: var(--spacing-6); }
-.ml-gap-8 { gap: var(--spacing-8); }
+/* ---------- Gap ---------- */
+.ml-gap-1  { gap: var(--spacing-1); }
+.ml-gap-2  { gap: var(--spacing-2); }
+.ml-gap-3  { gap: var(--spacing-3); }
+.ml-gap-4  { gap: var(--spacing-4); }
+.ml-gap-5  { gap: var(--spacing-5); }
+.ml-gap-6  { gap: var(--spacing-6); }
+.ml-gap-8  { gap: var(--spacing-8); }
+.ml-gap-10 { gap: var(--spacing-10); }
+.ml-gap-12 { gap: var(--spacing-12); }
+
+/* ---------- Stack 垂直节奏（v1.1 新增） ----------
+   容器内直接子元素自动获得等距上间距，
+   避免逐个写 margin、首尾元素多余留白的问题 */
+.ml-stack-1 > * + * { margin-top: var(--spacing-1); }
+.ml-stack-2 > * + * { margin-top: var(--spacing-2); }
+.ml-stack-3 > * + * { margin-top: var(--spacing-3); }
+.ml-stack-4 > * + * { margin-top: var(--spacing-4); }
+.ml-stack-5 > * + * { margin-top: var(--spacing-5); }
+.ml-stack-6 > * + * { margin-top: var(--spacing-6); }
+.ml-stack-8 > * + * { margin-top: var(--spacing-8); }

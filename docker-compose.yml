@@ -13,7 +13,7 @@
 services:
   # ============== MySQL 8.0 ==============
   mysql:
-    image: mysql:8.0
+    image: docker.m.daocloud.io/mysql:8.0
     container_name: minimall-mysql
     restart: unless-stopped
     environment:
@@ -51,7 +51,7 @@ services:
 
   # ============== Redis 7 ==============
   redis:
-    image: redis:7-alpine
+    image: docker.m.daocloud.io/redis:7-alpine
     container_name: minimall-redis
     restart: unless-stopped
     command: >
@@ -118,6 +118,12 @@ services:
 
       # ---- RAG ----
       RAG_ENABLED: ${RAG_ENABLED:-true}
+
+      # ---- 安全开关（本地默认即可；生产在 .env 覆盖）----
+      # CORS 允许源（逗号分隔）：本地 localhost，生产改为具体前端域名
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+      # 短信验证码是否回显：仅本地 true；生产必须 false（防 OTP 泄露）
+      SMS_EXPOSE_DEV_CODE: ${SMS_EXPOSE_DEV_CODE:-true}
 
       # ---- Spring ----
       SPRING_PROFILES_ACTIVE: docker

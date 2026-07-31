@@ -1,0 +1,25 @@
+# 核心代码边界声明（core-change-watch 使用）
+# 语法：每行一个路径前缀；"#" 注释；"!" 前缀表示排除
+
+# ---- 后端核心（微服务主线 + 过渡单体）----
+gateway/src/main
+user-service/src/main
+product-service/src/main
+order-service/src/main
+payment-service/src/main
+chat-service/src/main
+ai-service/src/main
+common/src/main
+backend/src/main
+
+# ---- 前端核心 ----
+admin-web/src
+web-mall/src
+seller-web/src
+shared-ui
+mini-program/pages
+mini-program/utils
+
+# ---- 排除生成物与静态资源 ----
+!product-service/src/main/resources/static
+!backend/src/main/resources/static

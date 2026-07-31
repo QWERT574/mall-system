@@ -4,7 +4,7 @@ const { get, post } = require('./request');
 
 /**
  * 统一支付方法
- * 后端 /api/order/pay/{id} 直接完成支付（模拟支付，无需微信支付参数）
+ * 后端 /api/payment/pay/{id} 直接完成支付（模拟支付，无需微信支付参数）
  * @param {number} orderId - 订单ID
  * @param {function} onSuccess - 支付成功回调
  * @param {function} onFail - 支付失败回调
@@ -30,7 +30,7 @@ const payOrder = async (orderId, onSuccess, onFail, onComplete, paymentMethod = 
 
     // 调用后端支付接口，后端直接完成支付
     console.log(`开始支付订单 ${orderId}`);
-    await post(`/api/order/pay/${orderId}`, { paymentMethod });
+    await post(`/api/payment/pay/${orderId}`, { paymentMethod });
 
     wx.hideLoading();
     wx.showToast({ title: '支付成功', icon: 'success', duration: 2000 });

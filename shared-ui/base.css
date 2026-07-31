@@ -96,3 +96,25 @@ ul, ol {
   background: var(--color-primary-200);
   color: var(--color-primary-900);
 }
+
+/* ============================================================
+   v1.1 新增（2026-07-26）：响应式排版缩放 + 平滑滚动
+   ============================================================ */
+
+/* 标题在小屏逐级收敛，避免 48px 大标题撑破移动端版面 */
+@media (max-width: 768px) {
+  h1 { font-size: var(--font-size-3xl); }
+  h2 { font-size: var(--font-size-2xl); }
+  h3 { font-size: var(--font-size-xl); }
+  h4 { font-size: var(--font-size-lg); }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: var(--font-size-2xl); }
+  h2 { font-size: var(--font-size-xl); }
+}
+
+/* 锚点跳转平滑滚动（系统开启"减少动态效果"时由 animations.css 自动禁用） */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}

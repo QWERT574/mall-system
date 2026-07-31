@@ -1,11 +1,13 @@
 <template>
   <button
     :class="buttonClasses"
-    :disabled="disabled"
+    :disabled="disabled || loading"
+    :aria-busy="loading || undefined"
     :type="nativeType"
-    @click="$emit('click', $event)"
+    @click="handleClick"
   >
-    <slot name="icon-left" />
+    <span v-if="loading" class="ml-btn__spinner" aria-hidden="true"></span>
+    <slot v-else name="icon-left" />
     <slot />
     <slot name="icon-right" />
   </button>
@@ -32,7 +34,7 @@ const props = withDefaults(defineProps<{
   nativeType: 'button'
 })
 
-defineEmits<{
+const emit = defineEmits<{
   click: [event: MouseEvent]
 }>()
 
@@ -41,6 +43,13 @@ const buttonClasses = computed(() => ({
   [`ml-btn--${props.type}`]: true,
   [`ml-btn--${props.size}`]: true,
   'ml-btn--block': props.block,
-  'ml-btn--icon': props.icon
+  'ml-btn--icon': props.icon,
+  'ml-btn--loading': props.loading
 }))
+
+// 加载/禁用状态下拦截点击，防止重复提交
+const handleClick = (event: MouseEvent) => {
+  if (props.disabled || props.loading) return
+  emit('click', event)
+}
 </script>

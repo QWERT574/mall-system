@@ -1,0 +1,73 @@
+# ============================================
+# 微服务主线 (gateway + 6 业务服务) 构建 + 测试
+# - gateway / order-service：运行冒烟测试（H2 / Mock 替身，无需真实中间件容器）
+# - 其余 5 个服务：先做编译验证，测试补齐后迁入 test 步骤
+# 说明：单体路径的 backend-test.yml 触发范围保持不变，两者互不影响
+# ============================================
+name: Microservices tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'common/**'
+      - 'gateway/**'
+      - 'user-service/**'
+      - 'product-service/**'
+      - 'order-service/**'
+      - 'payment-service/**'
+      - 'chat-service/**'
+      - 'ai-service/**'
+      - '.github/workflows/microservices-test.yml'
+  pull_request:
+    paths:
+      - 'common/**'
+      - 'gateway/**'
+      - 'user-service/**'
+      - 'product-service/**'
+      - 'order-service/**'
+      - 'payment-service/**'
+      - 'chat-service/**'
+      - 'ai-service/**'
+      - '.github/workflows/microservices-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: microservices-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+          cache: maven
+
+      # 各服务均依赖 minimall-common，先安装到本地仓库
+      - name: Install shared common module
+        working-directory: common
+        run: mvn -B -q install -DskipTests
+
+      - name: Test gateway (routes + traceId smoke)
+        working-directory: gateway
+        run: mvn -B test
+
+      - name: Test order-service (context smoke)
+        working-directory: order-service
+        run: mvn -B test
+
+      # 其余服务暂无测试，编译验证兜底（防止依赖/语法级回归静默合入）
+      - name: Compile remaining services
+        run: |
+          for svc in user-service product-service payment-service chat-service ai-service; do
+            echo "==== compile $svc ===="
+            mvn -B -q compile -f "$svc/pom.xml"
+          done

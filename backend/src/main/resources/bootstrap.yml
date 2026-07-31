@@ -1,0 +1,43 @@
+# ============================================
+# bootstrap.yml — Spring Cloud 引导配置
+# 最先加载，负责：服务注册 + 配置拉取
+# 
+# 约定 > 配置：只要连上 Nacos，其他配置都从 Nacos 读
+# ============================================
+
+spring:
+  application:
+    name: minimall-service    # ⭐ 服务名 — Nacos 里显示的名字
+                              # 后续拆分后每个服务有唯一名字：
+                              # user-service, product-service, order-service ...
+
+  cloud:
+    # ── Nacos 注册中心 ──
+    nacos:
+      discovery:
+        server-addr: ${NACOS_HOST:localhost}:8848   # Nacos 地址
+        # 如果 Nacos 开启了认证（生产必须），取消下面注释：
+        # username: ${NACOS_USERNAME:nacos}
+        # password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:}              # 命名空间（多环境隔离，开发留空=public）
+        group: DEFAULT_GROUP                         # 分组
+
+      # ── Nacos 配置中心 ──
+      config:
+        server-addr: ${NACOS_HOST:localhost}:8848
+        # username: ${NACOS_USERNAME:nacos}
+        # password: ${NACOS_PASSWORD:nacos}
+        namespace: ${NACOS_NAMESPACE:}
+        group: DEFAULT_GROUP
+        file-extension: yaml                         # 配置文件的格式
+        # 拉取配置规则：${spring.application.name}-${spring.profiles.active}.yaml
+        # 即：minimall-service.yaml 或 minimall-service-dev.yaml
+        refresh-enabled: true                        # ⭐ 关键：支持动态刷新配置
+        shared-configs:                              # 共享配置（所有服务公用）
+          - data-id: common-config.yaml
+            group: DEFAULT_GROUP
+            refresh: true
+
+# 暂时不从 Nacos 拉配置（Phase 1 单体模式先用本地）
+# 等 Nacos 启动后再启用配置中心功能
+spring.cloud.nacos.config.enabled: false

@@ -26,8 +26,30 @@ data/
 **/dist/
 **/build/
 
+# 前端构建产物拷贝（由 CI 从源码构建，不入库）
+# 注意：根目录 assets/ 与根 index.html 是 Pages 落地页的发布产物，
+# 被 .github/workflows/deploy-pages.yml 的 Assemble site 步骤直接消费（cp 到 site/），
+# 必须保持 git 跟踪，不可 untrack；仓库画像分析应把它们当产物而非源码
+web-mall/assets/
+admin-web/assets/
+seller-web/assets/
+web-mall-dist/
+admin-web-dist/
+seller-web-dist/
+
 # 依赖目录
 **/node_modules/
+
+# 本地 AI 助手工作目录（会话状态/报告，不入库）
+.qoder/
+.hermes/
+.workbuddy/
+.venv/
+
+# 误生成的运行时输出
+bash.exe.stackdump
+/activity
+**/compile_errors.txt
 
 # 环境配置文件（保留示例文件）
 **/.env
@@ -57,6 +79,10 @@ desktop.ini
 *.swp
 *.swo
 *~
+
+# 误创建的运行时产物（curl/PowerShell 把响应写到文件名里）
+gateway/[0-9]*
+gateway/[0-9]*/*
 
 # 测试文件（可选）
 # **/test_*.sql

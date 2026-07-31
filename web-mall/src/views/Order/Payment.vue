@@ -289,7 +289,7 @@ const handlePay = async () => {
       remark: `模拟支付 - ${getSelectedMethodName()}`
     };
 
-    const res = await api.post(`/order/pay/${order.value.id}`, paymentInfo);
+    const res = await api.post(`/payment/pay/${order.value.id}`, paymentInfo);
     
     // 关闭加载提示
     loadingMsg.close();

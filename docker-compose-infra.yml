@@ -1,0 +1,136 @@
+# ============================================
+#  MiniMall 微服务基础设施 — 中间件编排
+# 包含：RocketMQ 消息队列 + Nacos 注册/配置中心
+#       Sentinel 限流熔断 + Gateway 网关
+#
+# 用法：
+#   docker compose -f docker-compose-infra.yml up -d
+#   docker compose -f docker-compose-infra.yml down -v
+#
+# 访问地址（仅本机可访问，端口已绑定 127.0.0.1 防止外网）：
+#   RocketMQ Dashboard:  http://localhost:8088
+#   Nacos Console:       http://localhost:8848/nacos
+#   Sentinel Dashboard:  http://localhost:8858
+#
+# 安全说明：
+#   - 开发环境 Nacos 鉴权关闭（NACOS_AUTH_ENABLE=false），端口绑定 127.0.0.1
+#   - 生产环境必须：① 启用 NACOS_AUTH_ENABLE=true ② 设置 NACOS_AUTH_TOKEN（≥32 字节）
+#     ③ 应用端 application.yml 配 nacos.discovery.username/password ④ Nacos 放内网
+#   - 凭据请走 .env 文件，不要硬编码到本文件
+#
+# 注意：此文件只启中间件，应用服务编排见 docker-compose-apps.yml
+# ============================================
+
+services:
+  # ==========================================
+  # RocketMQ NameServer — 路由注册中心
+  # 作用：告诉 Producer/Consumer Broker 在哪
+  # 无状态，可以集群部署，开发环境单机即可
+  # ==========================================
+  rocketmq-namesrv:
+    image: docker.m.daocloud.io/apache/rocketmq:4.9.7
+    container_name: minimall-rmq-namesrv
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9876:9876"           # 仅本机访问，防止外网探测
+    command: sh mqnamesrv
+    environment:
+      - JAVA_OPT_EXT=-server -Xms256m -Xmx256m -Xmn128m
+    volumes:
+      - rocketmq-namesrv-logs:/home/rocketmq/logs
+    networks:
+      - infra-net
+
+  # ==========================================
+  # RocketMQ Broker — 消息存储与投递
+  # 作用：真正存消息、投递消息的地方
+  # 开发模式：autoCreateTopicEnable=true（自动创建 Topic）
+  # 生产环境要关掉，手动创建 Topic
+  # ==========================================
+  rocketmq-broker:
+    image: docker.m.daocloud.io/apache/rocketmq:4.9.7
+    container_name: minimall-rmq-broker
+    entrypoint: ["sh", "-c", "cd /home/rocketmq/rocketmq-4.9.7/bin && exec sh mqbroker -n rocketmq-namesrv:9876"]
+    depends_on:
+      - rocketmq-namesrv
+    ports:
+      - "127.0.0.1:10909:10909"         # 仅本机访问
+      - "127.0.0.1:10911:10911"         # 仅本机访问
+    environment:
+      - JAVA_OPT_EXT=-server -Xms256m -Xmx256m -Xmn128m
+    volumes:
+      - rocketmq-broker-logs:/home/rocketmq/logs
+      - rocketmq-broker-store:/home/rocketmq/store
+    networks:
+      - infra-net
+
+
+
+  # ==========================================
+  # Nacos — 注册中心 + 配置中心
+  # 注册中心：服务启动时来 Nacos "报个到"，别的服务就能找到它
+  # 配置中心：把 application.yml 搬到 Nacos，改配置不用重启
+  # 模式：standalone（单机，内嵌 Derby 数据库），生产用 MySQL 集群
+  # ==========================================
+  nacos:
+    image: docker.m.daocloud.io/nacos/nacos-server:v2.2.3
+    container_name: minimall-nacos
+    restart: unless-stopped
+    environment:
+      - MODE=standalone                    # 单机模式，开发够用
+      - PREFER_HOST_MODE=hostname
+      - NACOS_AUTH_ENABLE=${NACOS_AUTH_ENABLE:-false}   # 开发关闭，生产 ${NACOS_AUTH_ENABLE:-true}
+      # 生产环境启用鉴权时需要设置（≥32 字节随机串，openssl rand -base64 48）
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-<YOUR_NACOS_AUTH_TOKEN_256BIT>}
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY:-serverIdentity}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE:-security}
+    ports:
+      - "127.0.0.1:8848:8848"            # HTTP 端口，仅本机访问
+      - "127.0.0.1:9848:9848"            # gRPC 端口，仅本机访问
+    volumes:
+      - nacos-data:/home/nacos/data
+    networks:
+      - infra-net
+
+
+
+  # ==========================================
+  # Seata Server — 分布式事务协调器 (TC)
+  # AT 模式核心：接收 TM 注册、协调 RM 分支提交/回滚
+  # ==========================================
+  seata-server:
+    image: docker.m.daocloud.io/seataio/seata-server:1.6.1
+    container_name: minimall-seata
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8091:8091"     # Seata 通信端口，仅本机访问
+      - "127.0.0.1:7091:7091"     # Seata 控制台端口，仅本机访问
+    environment:
+      - SEATA_PORT=8091
+      - STORE_MODE=file                              # 开发单机用 file 存储；生产用 db
+      - SEATA_IP=seata-server
+    volumes:
+      - ./scripts/seata.properties:/seata-server/resources/seata.properties:ro
+    networks:
+      - infra-net
+
+# ==========================================
+# 数据持久化
+# ==========================================
+volumes:
+  rocketmq-namesrv-logs:
+    driver: local
+  rocketmq-broker-logs:
+    driver: local
+  rocketmq-broker-store:
+    driver: local
+  nacos-data:
+    driver: local
+
+# ==========================================
+# 中间件专用网络 — 与应用网络隔离
+# ==========================================
+networks:
+  infra-net:
+    driver: bridge
+    name: minimall-infra-net

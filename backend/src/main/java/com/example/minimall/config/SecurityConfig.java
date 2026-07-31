@@ -94,8 +94,9 @@ public class SecurityConfig {
                 // ===== WebSocket 端点 =====
                 .antMatchers("/ws-chat/**").permitAll()
                 // ===== 可观测性端点 (健康/指标/Prometheus) =====
-                // 生产环境建议仅内网/网关放行 /actuator/prometheus, 此处全部放行便于本地与 K8s 探针
-                .antMatchers("/actuator/**").permitAll()
+                // 健康检查公开供探针；其余 actuator 端点仅限本机(回环)访问，防止指标/环境信息泄露
+                .antMatchers("/actuator/health", "/actuator/info").permitAll()
+                .antMatchers("/actuator/**").hasIpAddress("127.0.0.1")
                 // ===== 其他所有接口均需认证 =====
                 // 业务级角色控制（买家/卖家/管理员）由 PermissionInterceptor 进一步校验
                 .anyRequest().authenticated()
@@ -109,18 +110,18 @@ public class SecurityConfig {
     }
     
     /**
-     * 装配 CORS 配置源：放行本地端口、内网网段，支持凭据与常用 HTTP 方法。
+     * 允许的前端源：本地默认仅 localhost，生产通过环境变量 CORS_ALLOWED_ORIGINS（逗号分隔）收敛为具体域名。
+     */
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
+    private String corsAllowedOrigins;
+
+    /**
+     * 装配 CORS 配置源：放行受信任来源，支持凭据与常用 HTTP 方法。
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(
-            "http://localhost:*",
-            "http://127.0.0.1:*",
-            "http://192.168.*:*",
-            "https://*.github.io",
-            "https://*.onrender.com"
-        ));
+        configuration.setAllowedOriginPatterns(Arrays.asList(corsAllowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);

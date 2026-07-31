@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.minimall.mapper.ProductMapper">
+
+    <!-- 根据关键字模糊查询商品（AI 关联商品检索使用） -->
+    <select id="selectByKeyword" resultType="com.example.minimall.model.Product">
+        SELECT * FROM product WHERE name LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <!-- 分页按关键字查询商品 -->
+    <select id="selectPageByKeyword" resultType="com.example.minimall.model.Product">
+        SELECT * FROM product WHERE name LIKE CONCAT('%', #{keyword}, '%')
+    </select>
+
+    <!-- 随机分页查询商品 -->
+    <select id="selectRandomPage" resultType="com.example.minimall.model.Product">
+        SELECT * FROM product ORDER BY RAND()
+    </select>
+
+    <!-- 获取商品及其销量 -->
+    <select id="selectProductWithSales" resultType="com.example.minimall.model.Product">
+        SELECT p.*, COALESCE(SUM(oi.quantity), 0) AS sales
+        FROM product p
+        LEFT JOIN order_item oi ON p.id = oi.product_id
+        LEFT JOIN orders o ON oi.order_id = o.id AND o.status = 2
+        GROUP BY p.id
+        ORDER BY p.id
+    </select>
+
+    <!-- 乐观锁更新库存 -->
+    <update id="updateStockById">
+        UPDATE product
+        SET stock = stock - #{decrease}
+        WHERE id = #{id} AND stock >= #{decrease}
+    </update>
+
+</mapper>

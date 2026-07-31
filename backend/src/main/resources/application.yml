@@ -17,7 +17,7 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:minimall}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&characterSetResults=utf8mb4&characterSetServer=utf8mb4&collationServer=utf8mb4_unicode_ci&connectionCollation=utf8mb4_unicode_ci&useLegacyDatetimeCode=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 50
       minimum-idle: 10
@@ -175,7 +175,7 @@ upload:
 
 # JWT 配置（由 JwtUtil 读取，环境变量可覆盖）
 jwt:
-  secret: ${JWT_SECRET:minimall2024securejwtkey1234567890abcdef12345678}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 # Spring 文件上传配置
@@ -220,3 +220,46 @@ info:
   app:
     name: ${spring.application.name:minimall}
     description: 农产品电商后台服务
+
+# ===== Sentinel 限流熔断配置 =====
+spring.cloud.sentinel:
+  # 控制台地址（Sentinel Dashboard）
+  transport:
+    dashboard: ${SENTINEL_DASHBOARD:localhost}:8858
+    # 与控制台通信的端口（每个服务实例自动分配一个可用端口）
+    port: ${SENTINEL_PORT:8719}
+  # 饥饿加载（启动时立即初始化 Sentinel，而非首次调用时懒加载）
+  eager: true
+  # 数据源配置（将规则持久化到 Nacos，Dashboard 重启不会丢失）
+  datasource:
+    flow:
+      nacos:
+        server-addr: ${NACOS_HOST:localhost}:8848
+        data-id: ${spring.application.name}-flow-rules
+        group-id: DEFAULT_GROUP
+        data-type: json
+        rule-type: flow
+    degrade:
+      nacos:
+        server-addr: ${NACOS_HOST:localhost}:8848
+        data-id: ${spring.application.name}-degrade-rules
+        group-id: DEFAULT_GROUP
+        data-type: json
+        rule-type: degrade
+
+# ===== OpenFeign 配置 =====
+spring.cloud.openfeign:
+  client:
+    config:
+      default:
+        connect-timeout: 3000      # 连接超时 3s
+        read-timeout: 10000         # 读取超时 10s
+        logger-level: BASIC         # 日志级别：NONE/BASIC/HEADERS/FULL
+  # 启用 OkHttp（比默认的 HttpURLConnection 快 3-5 倍）
+  okhttp:
+    enabled: true
+  # Feign 内部使用 Apache HttpClient（连接池复用）
+  httpclient:
+    enabled: false
+    max-connections: 200
+    max-connections-per-route: 50

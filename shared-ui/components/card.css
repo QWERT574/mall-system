@@ -9,7 +9,10 @@
   border-radius: var(--radius-xl);
   padding: var(--spacing-6);
   box-shadow: var(--shadow-sm);
-  transition: all var(--transition-base);
+  /* v1.1：transition 精确化 */
+  transition: transform var(--transition-base),
+              box-shadow var(--transition-base),
+              border-color var(--transition-base);
 }
 
 .ml-card:hover {
@@ -23,6 +26,15 @@
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: var(--color-primary-200);
+}
+/* v1.1：可交互卡片键盘可达 + 按压反馈（使用时需加 tabindex="0"） */
+.ml-card--interactive:focus-visible {
+  outline: 2px solid var(--color-primary-400);
+  outline-offset: 2px;
+}
+.ml-card--interactive:active {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .ml-card--flat {

@@ -1,0 +1,362 @@
+# ============================================
+#  MiniMall 微服务应用编排 — 6 微服务 + Gateway + 数据存储
+#  配套：docker-compose-infra.yml（Nacos / RocketMQ / Seata 中间件）
+#
+#  启动顺序（必须先启中间件，再启应用）：
+#    1) cp .env.example .env  并填入 JWT_SECRET 等
+#    2) docker compose -f docker-compose-infra.yml up -d        # 启中间件
+#    3) docker compose -f docker-compose-apps.yml up -d --build # 启应用（首次需 --build）
+#    4) docker compose -f docker-compose-apps.yml logs -f gateway
+#
+#  停止：
+#    docker compose -f docker-compose-apps.yml down
+#    docker compose -f docker-compose-infra.yml down -v   # 连同中间件数据清除
+#
+#  访问地址（仅本机可访问，端口绑定 127.0.0.1）：
+#    Gateway 入口:        http://localhost:8080   （统一入口，对外只暴露此端口即可）
+#    user-service:        http://localhost:8081
+#    product-service:     http://localhost:8082
+#    order-service:       http://localhost:8083
+#    payment-service:     http://localhost:8084
+#    chat-service:        http://localhost:8085
+#    ai-service:          http://localhost:8086
+#
+#  网络说明：
+#    - minimall-apps-net：本文件内部网络（apps 互相访问 + mysql/redis）
+#    - minimall-infra-net：external 网络，连接 infra 文件的 nacos/rocketmq-namesrv/seata-server
+#    - 微服务同时加入两个网络：既访问本网 mysql/redis，又访问 infra 的 nacos/rocketmq/seata
+#    - gateway 不连 DB/Redis，只需 Nacos（infra 网络已就绪）
+#
+#  注意：
+#    - MySQL 首次启动通过 backend/src/main/resources/sql/init_database.sql 建表
+#    - 各微服务共享 minimall 单库（DB_NAME=minimall），库表由上述 SQL 统一初始化
+#    - 上传文件通过共享卷 app-uploads 持久化：
+#        order-service / user-service 写入 → product-service 静态资源读取
+#        （gateway 路由 /uploads/** → product-service）
+#    - Sentinel Dashboard 为可选组件，当前 infra 文件未包含；微服务不依赖它即可运行
+#    - 跨文件依赖（nacos/rocketmq/seata）无法用 depends_on，请确保先启动 infra 文件
+#      微服务 restart: unless-stopped + Nacos 客户端重试可应对短暂不可用
+# ============================================
+
+# ---------- 公共片段（YAML 锚点，减少重复）----------
+x-microservice-build: &microservice-build
+  context: .
+  dockerfile: Dockerfile.microservice
+
+# 微服务通用环境变量（DB/Redis/Nacos/RocketMQ/JWT/JVM）
+x-microservice-env: &microservice-env
+  # ---- MySQL ----
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_NAME: ${MYSQL_DATABASE:-minimall}
+  DB_USERNAME: root
+  DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ChangeMe_RootPass_2026}
+  # ---- Redis ----
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+  # ---- Nacos（infra 网络中的服务名）----
+  NACOS_HOST: nacos
+  # ---- RocketMQ（infra 网络中的服务名，order/product 使用）----
+  ROCKETMQ_HOST: rocketmq-namesrv
+  # ---- JWT（所有服务共享同一密钥）----
+  JWT_SECRET: ${JWT_SECRET}
+  JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+  # ---- 内部服务间调用令牌（/api/internal/** 防伪造 + 网关向下游证明身份可信）----
+  # 生产必须在 .env 设为强随机串（openssl rand -base64 32），否则等于关闭了网关信任边界保护
+  INTERNAL_TOKEN: ${INTERNAL_TOKEN:-minimall-internal-token-dev}
+  # ---- Spring profile（生产设 prod：自动关闭短信验证码回显等调试行为）----
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+  # ---- CORS 允许源（逗号分隔；本地默认 localhost，生产改为具体前端域名）----
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
+  # ---- 短信验证码是否回显（仅本地 true；生产必须 false，防 OTP 泄露）----
+  SMS_EXPOSE_DEV_CODE: ${SMS_EXPOSE_DEV_CODE:-true}
+  # ---- Spring ----
+  SPRING_SQL_INIT_MODE: never
+  # ---- 时区 ----
+  TZ: Asia/Shanghai
+  # ---- JVM ----
+  JAVA_OPTS: ${JAVA_OPTS:--XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Dcsp.sentinel.log.dir=/app/logs}
+
+# 微服务对 mysql/redis 的健康依赖（等待存储就绪后再启动）
+x-microservice-depends: &microservice-depends
+  mysql:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+
+# 微服务加入的两个网络（apps 内部 + infra 外部）
+x-microservice-net: &microservice-net
+  - minimall-apps-net
+  - minimall-infra-net
+
+services:
+  # ==========================================
+  # MySQL 8.0 — 共享数据库
+  # 各微服务共用 minimall 库，建表 SQL 由单体 backend 的 init_database.sql 提供
+  # ==========================================
+  mysql:
+    image: docker.m.daocloud.io/mysql:8.0
+    container_name: minimall-mysql
+    restart: unless-stopped
+    # MySQL 8.0 在 Docker Desktop for Windows 上初始化时会因 seccomp 阻断 clone3 系统调用
+    # 报 "Can't create thread to handle bootstrap (errno: 1)" 导致 Data Dictionary 初始化失败。
+    # 关闭 seccomp 限制以允许线程创建（仅开发环境，生产环境应使用更新的 Docker / 自定义 seccomp profile）。
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-ChangeMe_RootPass_2026}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-minimall}
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --max_connections=200
+      - --innodb_buffer_pool_size=256M
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 首次启动自动执行建表 + 初始数据导入
+      - ./backend/src/main/resources/sql/init_database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - -h
+        - localhost
+        - -u
+        - root
+        - -p${MYSQL_ROOT_PASSWORD:-ChangeMe_RootPass_2026}
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - minimall-apps-net
+
+  # ==========================================
+  # Redis 7 — 缓存 / 验证码 / 会话
+  # ==========================================
+  redis:
+    image: docker.m.daocloud.io/redis:7-alpine
+    container_name: minimall-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - minimall-apps-net
+
+  # ==========================================
+  # Gateway — API 网关（统一入口，端口 8080）
+  # 职责：路由转发 / CORS / JWT 解析注入 X-User-Id/X-User-Role / Sentinel 限流
+  # 不直连 DB/Redis，仅依赖 Nacos（infra 网络已就绪）
+  # ==========================================
+  gateway:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: gateway
+        SERVER_PORT: "8080"
+    image: minimall/gateway:latest
+    container_name: minimall-gateway
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # user-service — 用户域（登录/注册/地址/头像/角色）
+  # ==========================================
+  user-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: user-service
+        SERVER_PORT: "8081"
+    image: minimall/user-service:latest
+    container_name: minimall-user-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8081:8081"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # product-service — 商品域（商品/分类/商家/评价/静态资源）
+  # ==========================================
+  product-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: product-service
+        SERVER_PORT: "8082"
+    image: minimall/product-service:latest
+    container_name: minimall-product-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8082:8082"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # order-service — 订单域（订单/购物车/售后/上传/seller/review）
+  # 额外依赖：RocketMQ（异步消息）+ Seata（分布式事务，通过 Nacos 注册）
+  # ==========================================
+  order-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: order-service
+        SERVER_PORT: "8083"
+    image: minimall/order-service:latest
+    container_name: minimall-order-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8083:8083"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # payment-service — 支付域（支付/优惠券/折扣/活动）
+  # ==========================================
+  payment-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: payment-service
+        SERVER_PORT: "8084"
+    image: minimall/payment-service:latest
+    container_name: minimall-payment-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8084:8084"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # chat-service — 客服域（会话/聊天/WebSocket）
+  # ==========================================
+  chat-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: chat-service
+        SERVER_PORT: "8085"
+    image: minimall/chat-service:latest
+    container_name: minimall-chat-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8085:8085"
+    environment:
+      <<: *microservice-env
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+  # ==========================================
+  # ai-service — AI 域（AI 客服/FAQ/RAG 知识库）
+  # 额外依赖：DeepSeek API + Embedding API（通过 .env 注入密钥）
+  # ==========================================
+  ai-service:
+    build:
+      <<: *microservice-build
+      args:
+        SERVICE_DIR: ai-service
+        SERVER_PORT: "8086"
+    image: minimall/ai-service:latest
+    container_name: minimall-ai-service
+    restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
+    depends_on: *microservice-depends
+    ports:
+      - "127.0.0.1:8086:8086"
+    environment:
+      <<: *microservice-env
+      # ---- DeepSeek (LLM) ----
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_URL: ${DEEPSEEK_API_URL:-https://api.deepseek.com/chat/completions}
+      # ---- Embedding (RAG 向量化) ----
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_API_URL: ${EMBEDDING_API_URL:-https://api.deepseek.com/embeddings}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1536}
+      # ---- RAG ----
+      RAG_ENABLED: ${RAG_ENABLED:-true}
+    volumes:
+      - app-uploads:/app/data/uploads
+    networks: *microservice-net
+
+# ==========================================
+# 数据持久化
+# ==========================================
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  # 上传文件共享卷：order/user 写入 → product 静态资源读取 → gateway 转发
+  app-uploads:
+    driver: local
+
+# ==========================================
+# 网络
+# ==========================================
+networks:
+  # 本文件内部网络（apps 互相 + mysql/redis）
+  minimall-apps-net:
+    driver: bridge
+    name: minimall-apps-net
+  # 外部网络：由 docker-compose-infra.yml 创建
+  # 微服务通过它访问 nacos / rocketmq-namesrv / seata-server
+  minimall-infra-net:
+    external: true
+    name: minimall-infra-net

@@ -3,8 +3,12 @@ package com.example.minimall.service.impl;
 import com.example.minimall.service.SmsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -20,6 +24,22 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class SmsServiceImpl implements SmsService {
     private static final Logger logger = LoggerFactory.getLogger(SmsServiceImpl.class);
+
+    @Autowired
+    private Environment environment;
+
+    /**
+     * 是否在接口响应中返回验证码（devCode）。
+     * 默认 true 方便本地调试；一旦激活 prod profile 则强制关闭，防止生产泄露 OTP 导致任意账号被接管。
+     */
+    @Value("${sms.expose-dev-code:true}")
+    private boolean exposeDevCodeProp;
+
+    /** 仅当未激活 prod profile 且开关为真时才返回验证码 */
+    private boolean shouldExposeDevCode() {
+        boolean prod = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        return exposeDevCodeProp && !prod;
+    }
 
     /** phone -> (code, expireAt) */
     private static final Map<String, SmsEntry> CODE_STORE = new ConcurrentHashMap<>();
@@ -93,8 +113,10 @@ public class SmsServiceImpl implements SmsService {
         result.put("ok", true);
         result.put("message", "验证码发送成功");
         result.put("expiresIn", TTL_MILLIS / 1000);
-        // dev 模式:开发环境把验证码直接返回,方便测试
-        result.put("devCode", code);
+        // 仅非生产环境才回显验证码方便调试；生产（prod profile 或 SMS_EXPOSE_DEV_CODE=false）绝不返回
+        if (shouldExposeDevCode()) {
+            result.put("devCode", code);
+        }
         return result;
     }
 

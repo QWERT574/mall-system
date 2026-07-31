@@ -1,15 +1,11 @@
 # ============================================
 # Deploy seller-web (商家管理端) to GitHub Pages
+# ⚠️ 已停用自动触发：单独部署会覆盖整个 Pages 站点（与另两端互斥）。
+# 统一发布路径见 deploy-pages.yml（/seller 子路径）；本文件仅保留手动触发备用。
 # ============================================
 name: Deploy seller-web
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'seller-web/**'
-      - 'shared-ui/**'
-      - '.github/workflows/deploy-seller-web.yml'
   workflow_dispatch:
 
 permissions:
@@ -44,6 +40,9 @@ jobs:
         run: npm run build
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Verify build output
+        run: test -f dist/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

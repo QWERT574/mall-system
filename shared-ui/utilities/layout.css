@@ -1,6 +1,11 @@
 ﻿/* ============================================================
-   乡村振兴 布局工具类 v1.0
+   乡村振兴 布局工具类 v1.1
    容器 / Flex / Grid / 显示控制
+   v1.1 更新（2026-07-26）：
+   1. 容器内边距响应式：16px（手机）/ 24px（平板）/ 32px（桌面），对齐规范 5.1
+   2. 新增自适应网格 ml-grid--auto 系列（auto-fill + minmax，免断点）
+   3. 新增 ml-grid--stack-sm：小屏强制单列
+   4. 新增 ml-section 区块垂直留白
    ============================================================ */
 
 /* 容器 */
@@ -12,9 +17,28 @@
   padding-left: var(--spacing-4);
   padding-right: var(--spacing-4);
 }
+/* v1.1：容器内边距随断点递增 */
+@media (min-width: 768px) {
+  .ml-container { padding-left: var(--spacing-6); padding-right: var(--spacing-6); }
+}
+@media (min-width: 1024px) {
+  .ml-container { padding-left: var(--spacing-8); padding-right: var(--spacing-8); }
+}
 
 .ml-container--sm { max-width: var(--grid-max-width-sm); }
 .ml-container--lg { max-width: var(--grid-max-width-lg); }
+
+/* v1.1：区块垂直留白（页头到内容、大段落分隔） */
+.ml-section {
+  padding-top: var(--spacing-16);
+  padding-bottom: var(--spacing-16);
+}
+@media (max-width: 768px) {
+  .ml-section {
+    padding-top: var(--spacing-10);
+    padding-bottom: var(--spacing-10);
+  }
+}
 
 /* Flex */
 .ml-flex           { display: flex; }
@@ -46,6 +70,18 @@
 .ml-grid--sm-gap { gap: var(--grid-gutter-sm); }
 .ml-grid--lg-gap { gap: var(--grid-gutter-lg); }
 
+/* v1.1：自适应网格 —— 无需断点，按可用宽度自动增减列数
+   典型场景：商品卡片、统计卡片列表 */
+.ml-grid--auto,
+.ml-grid--auto-sm,
+.ml-grid--auto-lg {
+  display: grid;
+  gap: var(--grid-gutter-md);
+}
+.ml-grid--auto    { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+.ml-grid--auto-sm { grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); }
+.ml-grid--auto-lg { grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); }
+
 .ml-col-1  { grid-column: span 1; }
 .ml-col-2  { grid-column: span 2; }
 .ml-col-3  { grid-column: span 3; }
@@ -63,12 +99,15 @@
 @media (max-width: 640px) {
   .ml-col-sm-6  { grid-column: span 6; }
   .ml-col-sm-12 { grid-column: span 12; }
+  /* v1.1：小屏强制单列（覆盖任意 ml-col-*） */
+  .ml-grid--stack-sm > * { grid-column: span 12; }
 }
 
 @media (max-width: 768px) {
   .ml-col-md-4  { grid-column: span 4; }
   .ml-col-md-6  { grid-column: span 6; }
   .ml-col-md-8  { grid-column: span 8; }
+  .ml-col-md-12 { grid-column: span 12; }   /* v1.1 补齐 */
 }
 
 /* 宽度 */

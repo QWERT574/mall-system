@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // 创建axios实例
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: parseInt(import.meta.env.VITE_REQUEST_TIMEOUT) || 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -190,7 +190,7 @@ api.getOrderDetail = (id) => api.get(`/order/detail/${id}`);
 api.updateOrderStatus = (data) => api.post('/order/updateStatus', data);
 
 // 支付订单
-api.payOrder = (orderId, paymentInfo) => api.post(`/order/pay/${orderId}`, paymentInfo);
+api.payOrder = (orderId, paymentInfo) => api.post(`/payment/pay/${orderId}`, paymentInfo);
 
 // 获取用户信息
 api.getUserInfo = () => api.get('/user/info');

@@ -42,14 +42,36 @@ CREATE TABLE IF NOT EXISTS category (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分类ID',
     name VARCHAR(50) NOT NULL COMMENT '分类名称',
     parent_id BIGINT DEFAULT 0 COMMENT '父分类ID',
+    level INT DEFAULT 1 COMMENT '分类层级',
     sort INT DEFAULT 0 COMMENT '排序',
     icon VARCHAR(255) DEFAULT NULL COMMENT '分类图标',
+    description VARCHAR(255) DEFAULT NULL COMMENT '分类描述',
     status TINYINT DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    is_deleted TINYINT DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     INDEX idx_parent_id (parent_id),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_is_deleted (is_deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品分类表';
+
+-- 商品分类关联表（ProductCategory 模型对应表，记录商品分类层级关系）
+CREATE TABLE IF NOT EXISTS product_category (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '分类ID',
+    name VARCHAR(50) NOT NULL COMMENT '分类名称',
+    parent_id BIGINT DEFAULT 0 COMMENT '父分类ID',
+    level INT DEFAULT 1 COMMENT '分类层级',
+    icon VARCHAR(255) DEFAULT NULL COMMENT '分类图标',
+    description VARCHAR(255) DEFAULT NULL COMMENT '分类描述',
+    sort INT DEFAULT 0 COMMENT '排序',
+    status TINYINT DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    is_deleted TINYINT DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_parent_id (parent_id),
+    INDEX idx_status (status),
+    INDEX idx_is_deleted (is_deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品分类关联表';
 
 -- 商品表
 CREATE TABLE IF NOT EXISTS product (
@@ -62,7 +84,7 @@ CREATE TABLE IF NOT EXISTS product (
     sales INT DEFAULT 0 COMMENT '销量',
     cover VARCHAR(255) DEFAULT NULL COMMENT '封面图片',
     images TEXT COMMENT '商品图片（JSON格式）',
-    category_id BIGINT NOT NULL COMMENT '分类ID',
+    category_id BIGINT DEFAULT NULL COMMENT '分类ID（允许 NULL，配合 ON DELETE SET NULL）',
     supplier_id BIGINT DEFAULT NULL COMMENT '供应商ID',
     status TINYINT DEFAULT 1 COMMENT '状态：0-下架，1-上架',
     is_featured TINYINT DEFAULT 0 COMMENT '是否推荐：0-否，1-是',
@@ -113,6 +135,8 @@ CREATE TABLE IF NOT EXISTS orders (
     district VARCHAR(50) NOT NULL COMMENT '区县',
     detail VARCHAR(255) NOT NULL COMMENT '详细地址',
     remark TEXT COMMENT '订单备注',
+    user_coupon_id BIGINT DEFAULT NULL COMMENT '使用的优惠券ID',
+    discount_amount DECIMAL(10,2) DEFAULT 0 COMMENT '优惠抵扣金额',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
@@ -330,6 +354,7 @@ CREATE TABLE IF NOT EXISTS payment (
     amount DECIMAL(10,2) NOT NULL COMMENT '支付金额',
     status INT DEFAULT 0 COMMENT '支付状态：0-待支付，1-已支付，2-支付失败',
     pay_time TIMESTAMP DEFAULT NULL COMMENT '支付时间',
+    remark VARCHAR(255) DEFAULT NULL COMMENT '支付备注',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
@@ -703,3 +728,211 @@ INSERT IGNORE INTO user (id, username, password, nickname, phone, user_type, sta
 INSERT IGNORE INTO user_role (user_id, role_id) VALUES (101, 3);
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ============================================
+-- 本地消息表（Outbox）— 保证订单消息可靠投递（C5）
+-- 与业务事务同库写入，提交后异步发 MQ，失败由补偿任务重试
+-- ============================================
+CREATE TABLE IF NOT EXISTS message_outbox (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+  biz_type        VARCHAR(64)  NOT NULL COMMENT '业务类型(ORDER_CREATED)',
+  biz_id          BIGINT       NOT NULL COMMENT '业务ID(orderId)',
+  topic           VARCHAR(128) NOT NULL COMMENT 'MQ topic',
+  payload         TEXT         NOT NULL COMMENT '消息体JSON',
+  status          TINYINT      NOT NULL DEFAULT 0 COMMENT '0=待发送 1=已发送 2=已放弃',
+  retry_count     INT          NOT NULL DEFAULT 0 COMMENT '已重试次数',
+  next_retry_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下次重试时间',
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_status_retry (status, next_retry_time),
+  INDEX idx_biz (biz_type, biz_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='本地消息表(Outbox)';
+
+-- ============================================
+-- 优惠券表（payment-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '优惠券ID',
+    name VARCHAR(100) NOT NULL COMMENT '优惠券名称',
+    type INT NOT NULL COMMENT '类型：1-满减，2-折扣，3-无门槛',
+    threshold DECIMAL(10,2) DEFAULT NULL COMMENT '使用门槛金额',
+    discount_value DECIMAL(10,2) NOT NULL COMMENT '优惠金额/折扣率',
+    total_count INT DEFAULT 0 COMMENT '发放总量',
+    used_count INT DEFAULT 0 COMMENT '已使用数量',
+    per_user_limit INT DEFAULT 1 COMMENT '每人限领数量',
+    start_time TIMESTAMP DEFAULT NULL COMMENT '生效时间',
+    end_time TIMESTAMP DEFAULT NULL COMMENT '失效时间',
+    status INT DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    seller_id BIGINT DEFAULT NULL COMMENT '发放商家ID',
+    description VARCHAR(500) DEFAULT NULL COMMENT '描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_seller_id (seller_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='优惠券表';
+
+-- ============================================
+-- 用户优惠券表（payment-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS user_coupon (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    coupon_id BIGINT NOT NULL COMMENT '优惠券ID',
+    status INT DEFAULT 0 COMMENT '状态：0-未使用，1-已使用，2-已过期',
+    used_at TIMESTAMP DEFAULT NULL COMMENT '使用时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '领取时间',
+    INDEX idx_user_id (user_id),
+    INDEX idx_coupon_id (coupon_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户优惠券表';
+
+-- ============================================
+-- 折扣活动表（payment-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS discount_activity (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '活动ID',
+    name VARCHAR(100) NOT NULL COMMENT '活动名称',
+    type INT NOT NULL COMMENT '类型：1-折扣，2-满减',
+    discount_rate DECIMAL(5,2) DEFAULT NULL COMMENT '折扣率（如0.85=85折）',
+    threshold DECIMAL(10,2) DEFAULT NULL COMMENT '满减门槛',
+    reduce_amount DECIMAL(10,2) DEFAULT NULL COMMENT '满减金额',
+    start_time TIMESTAMP DEFAULT NULL COMMENT '开始时间',
+    end_time TIMESTAMP DEFAULT NULL COMMENT '结束时间',
+    status INT DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
+    seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
+    description VARCHAR(500) DEFAULT NULL COMMENT '描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_seller_id (seller_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='折扣活动表';
+
+-- ============================================
+-- 折扣活动-商品关联表（payment-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS discount_activity_product (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    activity_id BIGINT NOT NULL COMMENT '活动ID',
+    product_id BIGINT NOT NULL COMMENT '商品ID',
+    discount_price DECIMAL(10,2) DEFAULT NULL COMMENT '活动价格',
+    INDEX idx_activity_id (activity_id),
+    INDEX idx_product_id (product_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='折扣活动商品关联表';
+
+-- ============================================
+-- 聊天会话表（chat-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS chat_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '会话ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
+    agent_id BIGINT DEFAULT NULL COMMENT '客服ID',
+    product_id BIGINT DEFAULT NULL COMMENT '关联商品ID',
+    order_id BIGINT DEFAULT NULL COMMENT '关联订单ID',
+    status INT DEFAULT 1 COMMENT '状态：0-已关闭，1-活跃',
+    session_type INT DEFAULT 0 COMMENT '会话类型',
+    source VARCHAR(50) DEFAULT NULL COMMENT '来源',
+    auto_reply_enabled INT DEFAULT 1 COMMENT '是否启用自动回复',
+    user_unread INT DEFAULT 0 COMMENT '用户未读数',
+    seller_unread INT DEFAULT 0 COMMENT '商家未读数',
+    last_message_at TIMESTAMP DEFAULT NULL COMMENT '最后消息时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    closed_at TIMESTAMP DEFAULT NULL COMMENT '关闭时间',
+    close_reason VARCHAR(255) DEFAULT NULL COMMENT '关闭原因',
+    INDEX idx_user_id (user_id),
+    INDEX idx_seller_id (seller_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天会话表';
+
+-- ============================================
+-- 聊天消息表（chat-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS chat_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',
+    session_id BIGINT NOT NULL COMMENT '会话ID',
+    sender_id BIGINT NOT NULL COMMENT '发送者ID',
+    sender_type INT NOT NULL COMMENT '发送者类型：0-用户，1-商家，2-客服',
+    receiver_id BIGINT DEFAULT NULL COMMENT '接收者ID',
+    content TEXT COMMENT '消息内容',
+    image_url VARCHAR(500) DEFAULT NULL COMMENT '图片URL',
+    message_type INT DEFAULT 0 COMMENT '消息类型：0-文本，1-图片，2-文件',
+    file_name VARCHAR(255) DEFAULT NULL COMMENT '文件名',
+    file_size BIGINT DEFAULT NULL COMMENT '文件大小',
+    related_order_id BIGINT DEFAULT NULL COMMENT '关联订单ID',
+    related_product_id BIGINT DEFAULT NULL COMMENT '关联商品ID',
+    is_read INT DEFAULT 0 COMMENT '是否已读',
+    read_at TIMESTAMP DEFAULT NULL COMMENT '已读时间',
+    status INT DEFAULT 1 COMMENT '状态：0-已撤回，1-正常',
+    delivered_at TIMESTAMP DEFAULT NULL COMMENT '送达时间',
+    is_auto_reply INT DEFAULT 0 COMMENT '是否自动回复',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    INDEX idx_session_id (session_id),
+    INDEX idx_sender_id (sender_id),
+    INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
+
+-- ============================================
+-- 聊天通知表（chat-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS chat_notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '通知ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    user_type INT DEFAULT 0 COMMENT '用户类型',
+    session_id BIGINT DEFAULT NULL COMMENT '会话ID',
+    message_id BIGINT DEFAULT NULL COMMENT '消息ID',
+    type VARCHAR(50) DEFAULT NULL COMMENT '通知类型',
+    title VARCHAR(100) DEFAULT NULL COMMENT '标题',
+    content VARCHAR(500) DEFAULT NULL COMMENT '内容',
+    is_read INT DEFAULT 0 COMMENT '是否已读',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    INDEX idx_user_id (user_id),
+    INDEX idx_is_read (is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天通知表';
+
+-- ============================================
+-- 售后聊天表（order-service/chat-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS after_sale_chat (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '消息ID',
+    after_sale_id BIGINT NOT NULL COMMENT '售后单ID',
+    sender_id BIGINT NOT NULL COMMENT '发送者ID',
+    sender_type INT NOT NULL COMMENT '发送者类型',
+    content TEXT COMMENT '消息内容',
+    message_type INT DEFAULT 0 COMMENT '消息类型',
+    is_read TINYINT DEFAULT 0 COMMENT '是否已读',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    target_type VARCHAR(50) DEFAULT NULL COMMENT '目标类型',
+    INDEX idx_after_sale_id (after_sale_id),
+    INDEX idx_sender_id (sender_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='售后聊天表';
+
+-- ============================================
+-- 管理员干预表（payment-service 域）
+-- ============================================
+CREATE TABLE IF NOT EXISTS admin_intervention (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '干预ID',
+    order_id BIGINT DEFAULT NULL COMMENT '订单ID',
+    product_id BIGINT DEFAULT NULL COMMENT '商品ID',
+    seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
+    user_id BIGINT DEFAULT NULL COMMENT '用户ID',
+    session_id BIGINT DEFAULT NULL COMMENT '会话ID',
+    aftersale_id BIGINT DEFAULT NULL COMMENT '售后单ID',
+    issue_type VARCHAR(50) DEFAULT NULL COMMENT '问题类型',
+    title VARCHAR(100) DEFAULT NULL COMMENT '标题',
+    description TEXT COMMENT '描述',
+    evidence_images TEXT COMMENT '证据图片(JSON)',
+    status INT DEFAULT 0 COMMENT '状态：0-待处理，1-处理中，2-已解决',
+    admin_id BIGINT DEFAULT NULL COMMENT '处理管理员ID',
+    result VARCHAR(500) DEFAULT NULL COMMENT '处理结果',
+    admin_remark VARCHAR(500) DEFAULT NULL COMMENT '管理员备注',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    processed_at TIMESTAMP DEFAULT NULL COMMENT '处理时间',
+    INDEX idx_order_id (order_id),
+    INDEX idx_seller_id (seller_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='管理员干预表';
