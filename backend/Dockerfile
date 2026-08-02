@@ -36,7 +36,7 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 RUN groupadd -r app && useradd -r -g app app \
- && mkdir -p /app/data/uploads /app/logs \
+ && mkdir -p /app/data/uploads /app/logs /home/app/logs/nacos \
  && chown -R app:app /app
 
 COPY --from=builder /build/backend/target/minimall-0.0.1-SNAPSHOT.jar app.jar
