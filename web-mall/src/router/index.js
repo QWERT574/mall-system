@@ -112,7 +112,7 @@ const routes = [
   {
     path: '/service',
     name: 'ServiceChat',
-    component: () => import('@/views/service/Chat.vue'),
+    component: () => import('@/views/Service/Chat.vue'),
     meta: { title: '客服聊天', auth: true }
   },
   {
