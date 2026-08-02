@@ -1,0 +1,48 @@
+# ============================================
+# 单体后端构建（含 common 模块依赖）
+# 从项目根目录构建：docker build -f Dockerfile.backend -t backend .
+# ============================================
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /build
+
+# 1. 先安装 common 模块到本地 Maven 仓库
+COPY common/pom.xml ./common/pom.xml
+RUN mvn -B -q -f common/pom.xml dependency:go-offline
+COPY common/src ./common/src
+RUN mvn -B -q -f common/pom.xml -DskipTests install
+
+# 2. 构建 backend
+COPY backend/pom.xml ./backend/pom.xml
+RUN mvn -B -q -f backend/pom.xml dependency:go-offline
+COPY backend/src ./backend/src
+RUN mvn -B -q -f backend/pom.xml -DskipTests package
+
+# ============================================
+# Stage 2: Runtime
+# ============================================
+FROM eclipse-temurin:17-jre-jammy
+
+WORKDIR /app
+
+RUN groupadd -r app && useradd -r -g app app \
+ && mkdir -p /app/data/uploads /app/logs \
+ && chown -R app:app /app
+
+COPY --from=builder /build/backend/target/minimall-0.0.1-SNAPSHOT.jar app.jar
+
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends wget ca-certificates tzdata \
+ && rm -rf /var/lib/apt/lists/* \
+ && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+
+USER app
+
+ENV JAVA_OPTS="-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -Dfile.encoding=UTF-8 -Djava.security.egd=file:/dev/./urandom"
+
+EXPOSE 8081
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:8081/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
