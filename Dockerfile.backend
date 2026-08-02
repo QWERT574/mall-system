@@ -1,6 +1,6 @@
 # ============================================
 # 单体后端构建（含 common 模块依赖）
-# 从项目根目录构建：docker build -f Dockerfile.backend -t backend .
+# 从项目根目录构建（Railway Root Directory = 空）
 # ============================================
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
@@ -25,8 +25,8 @@ FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
 RUN groupadd -r app && useradd -r -g app app \
- && mkdir -p /app/data/uploads /app/logs \
- && chown -R app:app /app
+ && mkdir -p /app/data/uploads /app/logs /home/app/logs/nacos \
+ && chown -R app:app /app /home/app/logs
 
 COPY --from=builder /build/backend/target/minimall-0.0.1-SNAPSHOT.jar app.jar
 
