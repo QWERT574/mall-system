@@ -15,7 +15,7 @@ RUN git clone --depth 1 --filter=blob:none --sparse https://github.com/QWERT574/
  && cp -r /tmp/repo/common /build/common \
  && rm -rf /tmp/repo
 
-# 复制 backend pom.xml（上下文是 backend/，所以不用加 backend/ 前缀）
+# 复制 backend pom.xml
 COPY pom.xml ./backend/pom.xml
 
 # 先构建 common 安装到本地 Maven 仓库
@@ -37,7 +37,7 @@ WORKDIR /app
 
 RUN groupadd -r app && useradd -r -g app app \
  && mkdir -p /app/data/uploads /app/logs /home/app/logs/nacos \
- && chown -R app:app /app
+ && chown -R app:app /app /home/app/logs
 
 COPY --from=builder /build/backend/target/minimall-0.0.1-SNAPSHOT.jar app.jar
 
