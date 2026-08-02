@@ -1,26 +1,30 @@
 # ============================================
 # 单体后端构建（含 common 模块依赖）
-# 通过 git 获取 common 模块，不依赖构建上下文
+# 构建上下文：项目根目录（Railway 默认）
 # ============================================
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
 
-# 安装 git（用于获取 common 模块）
+# 安装 git
 RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 
-# 从仓库获取 common 模块（只拉 common 目录，节省时间）
+# 从仓库获取 common 模块
 RUN git clone --depth 1 --filter=blob:none --sparse https://github.com/QWERT574/mall-system.git /tmp/repo \
  && cd /tmp/repo && git sparse-checkout set common \
  && cp -r /tmp/repo/common /build/common \
  && rm -rf /tmp/repo
 
+# 复制 backend pom.xml（利用层缓存）
+COPY backend/pom.xml ./backend/pom.xml
+
 # 先构建 common 安装到本地 Maven 仓库
-COPY pom.xml ./backend/pom.xml
-RUN mvn -B -q -f backend/pom.xml dependency:resolve || true
 RUN mvn -B -q -f /build/common/pom.xml -DskipTests install
 
-# 再构建 backend
-COPY src ./backend/src
+# 解析 backend 依赖（此时 common 已在本地仓库）
+RUN mvn -B -q -f backend/pom.xml dependency:go-offline
+
+# 复制 backend 源码并打包
+COPY backend/src ./backend/src
 RUN mvn -B -q -f backend/pom.xml -DskipTests package
 
 # ============================================
