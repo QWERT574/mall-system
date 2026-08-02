@@ -91,3 +91,36 @@ declare module 'stompjs' {
   const Stomp: any
   export default Stomp
 }
+
+declare module '@element-plus/icons-vue' {
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<{}, {}, any>
+  export default component
+  export const User: DefineComponent<{}, {}, any>
+  export const Star: DefineComponent<{}, {}, any>
+  export const Fold: DefineComponent<{}, {}, any>
+  export const Expand: DefineComponent<{}, {}, any>
+  export const SwitchButton: DefineComponent<{}, {}, any>
+  export const Switch: DefineComponent<{}, {}, any>
+  export const FolderOpened: DefineComponent<{}, {}, any>
+  export const PictureRounded: DefineComponent<{}, {}, any>
+  export const Collection: DefineComponent<{}, {}, any>
+  export const MagicStick: DefineComponent<{}, {}, any>
+  export const CircleCheckFilled: DefineComponent<{}, {}, any>
+  export const MoreFilled: DefineComponent<{}, {}, any>
+  export const Top: DefineComponent<{}, {}, any>
+  export const Calendar: DefineComponent<{}, {}, any>
+  export const Bottom: DefineComponent<{}, {}, any>
+  export const Link: DefineComponent<{}, {}, any>
+  export const Files: DefineComponent<{}, {}, any>
+  export const Van: DefineComponent<{}, {}, any>
+  export const ChatDotRound: DefineComponent<{}, {}, any>
+  export const ChatDotSquare: DefineComponent<{}, {}, any>
+  export const Odometer: DefineComponent<{}, {}, any>
+  export const Service: DefineComponent<{}, {}, any>
+  export const Grid: DefineComponent<{}, {}, any>
+  export const ArrowRightBold: DefineComponent<{}, {}, any>
+  export const Picture: DefineComponent<{}, {}, any>
+  export const ChatLineSquare: DefineComponent<{}, {}, any>
+  export const UserFilled: DefineComponent<{}, {}, any>
+}

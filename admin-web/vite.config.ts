@@ -29,7 +29,6 @@ export default defineConfig({
     }
   },
   define: {
-    'typeof global': 'typeof globalThis'
   },
   server: {
     port: 3001,
