@@ -10,7 +10,7 @@ backup_*/
 *.bkp
 
 # 运行时数据 (用户上传/产物/缓存, 应放在源码外)
-data/
+/data/
 **/uploads/
 !**/uploads/.gitkeep
 !**/static/images/
