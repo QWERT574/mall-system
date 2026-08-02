@@ -51,7 +51,7 @@ jobs:
         working-directory: admin-web
         run: |
           npm ci
-          npm run build -- --base=/admin/
+          npm run build -- --base=/mall-system/admin/
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
@@ -60,7 +60,7 @@ jobs:
         working-directory: seller-web
         run: |
           npm ci
-          npm run build -- --base=/seller/
+          npm run build -- --base=/mall-system/seller/
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
@@ -69,7 +69,7 @@ jobs:
         working-directory: web-mall
         run: |
           npm ci
-          npm run build -- --base=/mall/
+          npm run build -- --base=/mall-system/mall/
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
