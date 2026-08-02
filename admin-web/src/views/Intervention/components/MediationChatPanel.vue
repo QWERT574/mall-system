@@ -122,8 +122,8 @@ async function loadChatHistory() {
       if (userId && sellerId) {
         try {
           const session = await request.get('/chat/session', {
-            params: { userId, sellerId }
-          })
+                      params: { userId, sellerId }
+                    }) as any
           if (session && session.id) {
             sid = session.id
           }
@@ -142,7 +142,7 @@ async function loadChatHistory() {
     const res = await request.get(`/chat/messages/${sid}`, {
       params: { page: 1, size: 100 }
     })
-    messages.value = Array.isArray(res) ? res : (res?.records || res?.data || [])
+    messages.value = Array.isArray(res) ? res : ((res as any)?.records || (res as any)?.data || [])
     await nextTick()
     scrollToBottom()
   } catch (e: any) {
@@ -195,7 +195,7 @@ function getSenderLabel(msg: any): string {
   }
 }
 
-function getSenderTagType(msg: any): string {
+function getSenderTagType(msg: any): 'primary' | 'success' | 'warning' | 'info' | 'danger' {
   switch (msg.senderType) {
     case 1: return 'primary'
     case 2: return 'warning'

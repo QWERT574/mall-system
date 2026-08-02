@@ -299,7 +299,7 @@ const statCards = computed(() => [
 const loadStats = async () => {
   try {
     const data = await getKnowledgeStats()
-    stats.value = data as KnowledgeStats
+    stats.value = data as unknown as KnowledgeStats
   } catch (e) { /* ignore */ }
 }
 
@@ -505,7 +505,7 @@ const loadConversations = async () => {
   convLoading.value = true
   try {
     const uid = convFilter.userId ? Number(convFilter.userId) : undefined
-    conversations.value = (await getConversations(uid)) as ConversationSession[]
+    conversations.value = (await getConversations(uid)) as unknown as ConversationSession[]
   } catch (e) { /* ignore */ } finally {
     convLoading.value = false
   }
@@ -520,7 +520,7 @@ const openMessageDrawer = async (row: ConversationSession) => {
   messageLoading.value = true
   messages.value = []
   try {
-    messages.value = (await getConversationMessages(row.id)) as ConversationMessage[]
+    messages.value = (await getConversationMessages(row.id)) as unknown as ConversationMessage[]
   } catch (e) { /* ignore */ } finally {
     messageLoading.value = false
   }

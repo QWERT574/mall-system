@@ -66,7 +66,7 @@ async function toggleStatus(agent: any) {
   }
 }
 
-function handleDelete(agent: any) {
+function handleDelete(_agent: any) {
   ElMessage.info('请联系管理员执行删除操作')
 }
 
@@ -75,8 +75,8 @@ function statusLabel(status: number) {
   return map[status] || '未知'
 }
 
-function statusType(status: number) {
-  const map: Record<number, string> = { 0: 'info', 1: 'success', 2: 'warning', 3: '' }
+function statusType(status: number): 'success' | 'warning' | 'info' | 'danger' {
+  const map: Record<number, 'success' | 'warning' | 'info' | 'danger'> = { 0: 'info', 1: 'success', 2: 'warning', 3: 'info' }
   return map[status] || 'info'
 }
 

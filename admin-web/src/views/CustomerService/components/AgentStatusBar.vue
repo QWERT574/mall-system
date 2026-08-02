@@ -23,7 +23,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { SwitchButton } from '@element-plus/icons-vue'
+import { Switch } from '@element-plus/icons-vue'
 import { useChatStore } from '@/stores/chat'
 
 const chatStore = useChatStore()

@@ -223,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUserList, verifySupplier, updateUserStatus, deactivateUser } from '@/api/user'
 
@@ -257,6 +257,8 @@ const verifyRules = {
     { required: true, message: '请输入拒绝原因', trigger: 'blur' }
   ]
 }
+
+const detailDialogWidth = computed(() => window.innerWidth < 768 ? '90%' : '900px')
 
 const fetchData = async () => {
   loading.value = true

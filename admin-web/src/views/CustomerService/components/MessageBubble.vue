@@ -45,7 +45,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { MagicStick, Document, Download, CircleCheckFilled } from '@element-plus/icons-vue'
 
 const props = defineProps<{

@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { MoreFilled, ChatDotRound } from '@element-plus/icons-vue'
+import { MoreFilled } from '@element-plus/icons-vue'
 import type { ChatSession } from '@/stores/chat'
 
 defineProps<{

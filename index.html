@@ -1,16 +1,70 @@
-﻿<!doctype html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
   <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-    <title>乡村振兴</title>
-    <script type="module" crossorigin src="/assets/index-59d44f3b.js"></script>
-    <link rel="stylesheet" href="/assets/index-ad6cc267.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>乡村振兴农产品销售平台</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        text-align: center;
+        background: rgba(255,255,255,0.95);
+        border-radius: 20px;
+        padding: 50px 40px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        max-width: 600px;
+        width: 90%;
+      }
+      h1 {
+        font-size: 28px;
+        color: #333;
+        margin-bottom: 10px;
+      }
+      p {
+        color: #666;
+        font-size: 16px;
+        margin-bottom: 30px;
+      }
+      .links {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .links a {
+        display: block;
+        padding: 16px 24px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-size: 18px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .links a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      }
+      .admin { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+      .seller { background: linear-gradient(135deg, #f093fb, #f5576c); color: #fff; }
+      .mall { background: linear-gradient(135deg, #4facfe, #00f2fe); color: #fff; }
+    </style>
   </head>
   <body>
-    <script>window.global = window.globalThis</script>
-    <div id="app"></div>
-    
+    <div class="container">
+      <h1>🌾 乡村振兴农产品销售平台</h1>
+      <p>助力乡村振兴，推广优质农产品</p>
+      <div class="links">
+        <a href="./admin/" class="admin">🛠 管理后台</a>
+        <a href="./seller/" class="seller">🏪 商家中心</a>
+        <a href="./mall/" class="mall">🛒 商城前台</a>
+      </div>
+    </div>
   </body>
 </html>
-

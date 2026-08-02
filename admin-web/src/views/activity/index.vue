@@ -14,7 +14,7 @@
       <el-form :inline="true" :model="queryParams" class="search-form">
         <el-form-item label="活动类型">
           <el-select v-model="queryParams.activityType" placeholder="请选择类型" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" :value="null as any" />
             <el-option label="大宗采购" :value="1" />
             <el-option label="农场参观" :value="2" />
             <el-option label="实地观光" :value="3" />
@@ -22,7 +22,7 @@
         </el-form-item>
         <el-form-item label="活动状态">
           <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" :value="null as any" />
             <el-option label="筹备中" :value="0" />
             <el-option label="进行中" :value="1" />
             <el-option label="已结束" :value="2" />
@@ -209,8 +209,8 @@ const dialogWidth = computed(() => windowWidth.value < 768 ? '90%' : '700px')
 const queryParams = reactive({
   page: 1,
   pageSize: 20,
-  status: null,
-  activityType: null
+  status: undefined as number | undefined,
+  activityType: undefined as number | undefined
 })
 
 const formData = reactive({
@@ -270,14 +270,14 @@ const handleQuery = () => {
 }
 
 const handleReset = () => {
-  queryParams.status = null
-  queryParams.activityType = null
+  queryParams.status = undefined
+  queryParams.activityType = undefined
   queryParams.page = 1
   fetchData()
 }
 
 const getActivityTypeText = (type: number) => {
-  const typeMap = {
+  const typeMap: Record<number, string> = {
     1: '大宗采购',
     2: '农场参观',
     3: '实地观光'
@@ -285,8 +285,8 @@ const getActivityTypeText = (type: number) => {
   return typeMap[type] || '未知'
 }
 
-const getActivityTypeType = (type: number) => {
-  const typeMap = {
+const getActivityTypeType = (type: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const typeMap: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     1: 'primary',
     2: 'success',
     3: 'warning'
@@ -295,7 +295,7 @@ const getActivityTypeType = (type: number) => {
 }
 
 const getStatusText = (status: number) => {
-  const statusMap = {
+  const statusMap: Record<number, string> = {
     0: '筹备中',
     1: '进行中',
     2: '已结束',
@@ -304,8 +304,8 @@ const getStatusText = (status: number) => {
   return statusMap[status] || '未知'
 }
 
-const getStatusType = (status: number) => {
-  const typeMap = {
+const getStatusType = (status: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const typeMap: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     0: 'info',
     1: 'primary',
     2: 'success',
@@ -376,7 +376,7 @@ const handleDelete = async (row: any) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate(async (valid) => {
+  await formRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
         if (isEdit.value) {

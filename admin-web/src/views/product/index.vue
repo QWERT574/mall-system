@@ -17,7 +17,7 @@
         </el-form-item>
         <el-form-item label="分类">
           <el-select v-model="queryParams.categoryId" placeholder="请选择分类" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" :value="null as any" />
             <el-option label="蔬菜" :value="1" />
             <el-option label="水果" :value="2" />
             <el-option label="肉类" :value="3" />
@@ -152,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getProductList, createProduct, updateProduct, deleteProduct } from '@/api/product'
 
@@ -164,11 +164,14 @@ const dialogTitle = ref('添加商品')
 const formRef = ref()
 const isEdit = ref(false)
 
+const windowWidth = ref(window.innerWidth)
+const dialogWidth = computed(() => windowWidth.value < 768 ? '90%' : '700px')
+
 const queryParams = reactive({
   page: 1,
   pageSize: 20,
   keyword: '',
-  categoryId: null
+  categoryId: undefined as number | undefined
 })
 
 const formData = reactive({
@@ -176,9 +179,9 @@ const formData = reactive({
   name: '',
   description: '',
   price: 0,
-  originalPrice: null,
+  originalPrice: undefined as number | undefined,
   stock: 0,
-  categoryId: null,
+  categoryId: undefined as number | undefined,
   status: 1,
   isFeatured: false,
   cover: ''
@@ -223,7 +226,7 @@ const handleQuery = () => {
 
 const handleReset = () => {
   queryParams.keyword = ''
-  queryParams.categoryId = null
+  queryParams.categoryId = undefined
   queryParams.page = 1
   fetchData()
 }
@@ -236,9 +239,9 @@ const handleAdd = () => {
     name: '',
     description: '',
     price: 0,
-    originalPrice: null,
+    originalPrice: undefined,
     stock: 0,
-    categoryId: null,
+    categoryId: undefined,
     status: 1,
     isFeatured: false,
     cover: ''
@@ -272,7 +275,7 @@ const handleDelete = async (row: any) => {
 const handleSubmit = async () => {
   if (!formRef.value) return
   
-  await formRef.value.validate(async (valid) => {
+  await formRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
         if (isEdit.value) {

@@ -13,7 +13,7 @@
         </el-form-item>
         <el-form-item label="订单状态">
           <el-select v-model="queryParams.status" placeholder="请选择状态" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" :value="null as any" />
             <el-option label="待支付" :value="0" />
             <el-option label="待发货" :value="1" />
             <el-option label="已发货" :value="2" />
@@ -290,8 +290,8 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { getOrderList, shipOrder } from '@/api/order'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getOrderList, shipOrder, cancelOrder } from '@/api/order'
 import { User, Shop } from '@element-plus/icons-vue'
 
 const loading = ref(false)
@@ -306,27 +306,26 @@ const windowWidth = ref(window.innerWidth)
 const onResize = () => { windowWidth.value = window.innerWidth }
 onMounted(() => { window.addEventListener('resize', onResize) })
 onBeforeUnmount(() => { window.removeEventListener('resize', onResize) })
-const shipDialogWidth = computed(() => windowWidth.value < 768 ? '90%' : '500px')
 const detailDialogWidth = computed(() => windowWidth.value < 768 ? '90%' : '900px')
 
 const queryParams = reactive({
   page: 1,
   pageSize: 20,
-  status: null,
+  status: undefined as number | undefined,
   orderNo: ''
 })
 
 const shipForm = reactive({
   orderId: 0,
   logisticsCompany: '',
-  trackingNo: ''
+  trackingNumber: ''
 })
 
 const shipRules = {
   logisticsCompany: [
     { required: true, message: '请输入物流公司', trigger: 'blur' }
   ],
-  trackingNo: [
+  trackingNumber: [
     { required: true, message: '请输入物流单号', trigger: 'blur' }
   ]
 }
@@ -351,14 +350,14 @@ const handleQuery = () => {
 }
 
 const handleReset = () => {
-  queryParams.status = null
+  queryParams.status = undefined
   queryParams.orderNo = ''
   queryParams.page = 1
   fetchData()
 }
 
 const getStatusText = (status: number) => {
-  const statusMap = {
+  const statusMap: Record<number, string> = {
     0: '待支付',
     1: '待发货',
     2: '已发货',
@@ -369,8 +368,8 @@ const getStatusText = (status: number) => {
   return statusMap[status] || '未知'
 }
 
-const getStatusType = (status: number) => {
-  const typeMap = {
+const getStatusType = (status: number): 'primary' | 'success' | 'warning' | 'info' | 'danger' => {
+  const typeMap: Record<number, 'primary' | 'success' | 'warning' | 'info' | 'danger'> = {
     0: 'warning',
     1: 'info',
     2: 'primary',
@@ -387,7 +386,7 @@ const handleDetail = (row: any) => {
 }
 
 const handleShipFromDetail = () => {
-  shipForm.value.orderId = currentOrder.value.id
+  shipForm.orderId = currentOrder.value.id
   detailDialogVisible.value = false
   shipDialogVisible.value = true
 }
@@ -438,17 +437,17 @@ const getLogisticsCompanyText = (company: string) => {
 const handleShip = (row: any) => {
   shipForm.orderId = row.id
   shipForm.logisticsCompany = ''
-  shipForm.trackingNo = ''
+  shipForm.trackingNumber = ''
   shipDialogVisible.value = true
 }
 
 const handleShipConfirm = async () => {
   if (!shipFormRef.value) return
   
-  await shipFormRef.value.validate(async (valid) => {
+  await shipFormRef.value.validate(async (valid: boolean) => {
     if (valid) {
       try {
-        await shipOrder(shipForm.orderId, shipForm.logisticsCompany, shipForm.trackingNo)
+        await shipOrder({ orderId: shipForm.orderId, logisticsCompany: shipForm.logisticsCompany, trackingNumber: shipForm.trackingNumber })
         ElMessage.success('发货成功')
         shipDialogVisible.value = false
         fetchData()

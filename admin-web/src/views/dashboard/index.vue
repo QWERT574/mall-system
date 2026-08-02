@@ -194,7 +194,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
-import { Goods, ShoppingCart, Timer, Money, Top, User, Calendar, Refresh, Bottom } from '@element-plus/icons-vue'
+import { Goods, ShoppingCart, Timer, Money, Top, Calendar, Refresh, Bottom } from '@element-plus/icons-vue'
 import { getDashboardStats, getDashboardChartData } from '@/api/system'
 import { getActivityList } from '@/api/activity'
 import { getAfterSaleList } from '@/api/aftersale'

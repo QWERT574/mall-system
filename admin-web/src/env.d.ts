@@ -50,6 +50,36 @@ declare module '@element-plus/icons-vue' {
   export const ShoppingCart: DefineComponent<{}, {}, any>
   export const Ticket: DefineComponent<{}, {}, any>
   export const DataAnalysis: DefineComponent<{}, {}, any>
+  export const Fold: DefineComponent<{}, {}, any>
+  export const Expand: DefineComponent<{}, {}, any>
+  export const SwitchButton: DefineComponent<{}, {}, any>
+  export const FolderOpened: DefineComponent<{}, {}, any>
+  export const Collection: DefineComponent<{}, {}, any>
+  export const MagicStick: DefineComponent<{}, {}, any>
+  export const CircleCheckFilled: DefineComponent<{}, {}, any>
+  export const MoreFilled: DefineComponent<{}, {}, any>
+  export const Top: DefineComponent<{}, {}, any>
+  export const Calendar: DefineComponent<{}, {}, any>
+  export const Bottom: DefineComponent<{}, {}, any>
+  export const Link: DefineComponent<{}, {}, any>
+  export const Files: DefineComponent<{}, {}, any>
+  export const Switch: DefineComponent<{}, {}, any>
+  export const Van: DefineComponent<{}, {}, any>
+  export const ChatDotSquare: DefineComponent<{}, {}, any>
+  export const Odometer: DefineComponent<{}, {}, any>
+  export const Service: DefineComponent<{}, {}, any>
+  export const Grid: DefineComponent<{}, {}, any>
+  export const ArrowRightBold: DefineComponent<{}, {}, any>
+}
+
+declare module 'element-plus/dist/locale/zh-cn.mjs' {
+  const locale: any
+  export default locale
+}
+
+declare module '@mall/shared-ui/vue-components' {
+  const components: any
+  export default components
 }
 
 declare module 'sockjs-client' {

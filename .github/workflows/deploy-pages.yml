@@ -44,7 +44,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 22
 
       # ---- admin-web（TS，构建内含 vue-tsc 类型检查）----
       - name: Build admin-web

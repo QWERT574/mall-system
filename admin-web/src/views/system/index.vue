@@ -74,9 +74,9 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getSystemConfigList, updateSystemConfig, getAiConfig, updateAiConfig } from '@/api/system'
+import { updateSystemConfig, updateAiConfig } from '@/api/system'
 
 const activeTab = ref('basic')
 

@@ -94,7 +94,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to, _from, next) => {
   const token = localStorage.getItem('admin_token')
   
   if (to.path !== '/login' && !token) {
