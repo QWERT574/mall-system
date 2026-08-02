@@ -1,6 +1,7 @@
 # ============================================
 # 单体后端构建（含 common 模块依赖）
-# 构建上下文：项目根目录（Railway 默认）
+# 构建上下文：backend/（Railway 以 Dockerfile 所在目录为上下文）
+# common 通过 git sparse-checkout 获取
 # ============================================
 FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /build
@@ -14,17 +15,17 @@ RUN git clone --depth 1 --filter=blob:none --sparse https://github.com/QWERT574/
  && cp -r /tmp/repo/common /build/common \
  && rm -rf /tmp/repo
 
-# 复制 backend pom.xml（利用层缓存）
-COPY backend/pom.xml ./backend/pom.xml
+# 复制 backend pom.xml（上下文是 backend/，所以不用加 backend/ 前缀）
+COPY pom.xml ./backend/pom.xml
 
 # 先构建 common 安装到本地 Maven 仓库
 RUN mvn -B -q -f /build/common/pom.xml -DskipTests install
 
-# 解析 backend 依赖（此时 common 已在本地仓库）
+# 解析 backend 依赖
 RUN mvn -B -q -f backend/pom.xml dependency:go-offline
 
 # 复制 backend 源码并打包
-COPY backend/src ./backend/src
+COPY src ./backend/src
 RUN mvn -B -q -f backend/pom.xml -DskipTests package
 
 # ============================================
