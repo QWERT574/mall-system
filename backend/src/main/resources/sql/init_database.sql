@@ -76,30 +76,27 @@ CREATE TABLE IF NOT EXISTS product_category (
 -- 商品表
 CREATE TABLE IF NOT EXISTS product (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '商品ID',
-    name VARCHAR(100) NOT NULL COMMENT '商品名称',
-    description TEXT COMMENT '商品描述',
-    price DECIMAL(10,2) NOT NULL COMMENT '商品价格',
-    original_price DECIMAL(10,2) DEFAULT NULL COMMENT '原价',
-    stock INT DEFAULT 0 COMMENT '库存数量',
-    sales INT DEFAULT 0 COMMENT '销量',
+    name VARCHAR(255) NOT NULL COMMENT '商品名称',
     cover VARCHAR(255) DEFAULT NULL COMMENT '封面图片',
-    images TEXT COMMENT '商品图片（JSON格式）',
+    price DECIMAL(10,2) NOT NULL COMMENT '商品价格',
+    stock INT DEFAULT 0 COMMENT '库存数量',
+    description TEXT COMMENT '商品描述',
     category_id BIGINT DEFAULT NULL COMMENT '分类ID（允许 NULL，配合 ON DELETE SET NULL）',
-    supplier_id BIGINT DEFAULT NULL COMMENT '供应商ID',
-    status TINYINT DEFAULT 1 COMMENT '状态：0-下架，1-上架',
-    is_featured TINYINT DEFAULT 0 COMMENT '是否推荐：0-否，1-是',
+    seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
+    parent_category_id BIGINT DEFAULT NULL COMMENT '父分类ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE SET NULL,
-    FOREIGN KEY (supplier_id) REFERENCES user(id) ON DELETE SET NULL,
+    CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE SET NULL,
+    CONSTRAINT fk_product_parent_category FOREIGN KEY (parent_category_id) REFERENCES category(id) ON DELETE SET NULL,
     INDEX idx_category_id (category_id),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at),
-    INDEX idx_price (price),
-    INDEX idx_sales (sales),
-    INDEX idx_name (name),
-    INDEX idx_supplier_id (supplier_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
+    INDEX idx_parent_category_id (parent_category_id),
+    INDEX idx_product_seller (seller_id),
+    INDEX idx_product_category_price (category_id, price),
+    INDEX idx_product_name (name),
+    INDEX idx_product_stock (stock),
+    FULLTEXT KEY ft_product_search (name, description) WITH PARSER ngram,
+    FULLTEXT KEY ft_product_name (name) WITH PARSER ngram
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品表';
 
 -- 商品规格表
 CREATE TABLE IF NOT EXISTS product_spec (
