@@ -7,6 +7,16 @@ server:
       force: true
 
 spring:
+  # 测试环境不连 Nacos/Sentinel（CI 无中间件容器；本地有 Nacos 时也无意义）
+  # 对齐 gateway GatewayRouteSmokeTest 的既有先例
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    sentinel:
+      enabled: false
   datasource:
     url: jdbc:mysql://localhost:3306/minimall?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&characterSetResults=utf8mb4&characterSetServer=utf8mb4&collationServer=utf8mb4_unicode_ci&connectionCollation=utf8mb4_unicode_ci&useLegacyDatetimeCode=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
