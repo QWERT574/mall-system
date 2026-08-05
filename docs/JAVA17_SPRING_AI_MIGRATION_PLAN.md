@@ -501,8 +501,9 @@ public class AIService {
 
 - 9 服务 `mvn clean compile`（JDK 17.0.12）全绿
 - gateway 4/4、order 2/2 测试与基线一致；backend 纯单测 27/27 绿
-- backend context 测试（15 个）因本地 Nacos/Redis 未启动受限（环境问题，非迁移问题）
-- 部署联动待办：railway.toml / Dockerfile / k8s 的 JDK 8 → 17 基础镜像（未执行）
+- **运行时完整回归（2026-08-05 收尾，Nacos+Redis+MySQL 全环境就绪）**：backend **321 测试仅 1 失败 0 错误**——唯一失败为 HnswIndexTest.testLargeScalePerformance（既有脆弱测试：无种子随机向量 + HNSW 近似检索 top-1 精确断言，代码迁移零改动 git diff=0，与迁移无关）；此前因环境受限的 ChatControllerTest(9)/ChatMessageDeliveryE2ETest(6)/AdminInterventionIntegrationTest(9) 等 context 测试全部通过
+- 环境坑记录：Windows 端口 13306 落在 Hyper-V 保留段（13253-13352）导致 Docker bind 失败 → 改用 3307；minimall-mysql 容器 root 密码为 `ChangeMe_RootPass_2026`（非 123456）；测试用 `SPRING_DATASOURCE_*` 环境变量覆盖 JDBC 指向 3307
+- 部署联动：Dockerfile/railway.toml 已是 temurin-17（无需改动）
 
 ### 阶段二（Spring AI）状态
 
