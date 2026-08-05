@@ -26,7 +26,7 @@ Notes:
 
 ## Development Commands
 
-### Backend monolith (Spring Boot 2.7.9 / Java 8 / Maven) — transitional
+### Backend monolith (Spring Boot 3.4.5 / Java 17 / Maven) — transitional
 
 ```bash
 # Build and run (port 8081; conflicts with user-service if both run natively)
@@ -70,7 +70,7 @@ cd <project> && npm run build
 
 Each frontend proxies `/api`, `/uploads`, `/images`, and `/ws-chat` in dev mode; targets differ per app (see Startup Matrix note).
 
-### Microservices (Spring Cloud 2021.0.9 / Spring Cloud Alibaba 2021.0.5.0)
+### Microservices (Spring Cloud 2024.0.0 / Spring Cloud Alibaba 2023.0.3.4)
 
 ```bash
 # 1. Start middleware first: Nacos + RocketMQ (namesrv/broker) + Seata
@@ -86,7 +86,7 @@ docker compose -f docker-compose-apps.yml up -d
 cd <service> && mvn clean package -DskipTests
 ```
 
-All microservice images are built with the shared `Dockerfile.microservice` (multi-stage: Maven + Temurin 17 JRE; sources still target Java 8).
+All microservice images are built with the shared `Dockerfile.microservice` (multi-stage: Maven + Temurin 17 JRE; sources target Java 17).
 
 ### Docker (monolith path)
 
@@ -201,7 +201,7 @@ WeChat native mini-program in `mini-program/`. No third-party UI framework. 21 p
 | `backend/src/main/resources/application.yml` | All backend configuration |
 | `backend/src/main/resources/sql/init_database.sql` | Full schema + seed data (36 tables) |
 | `backend/pom.xml` | Maven dependencies |
-| `backend/Dockerfile` | Multi-stage Docker build for the monolith (Maven + Temurin 17 JRE; sources target Java 8) |
+| `backend/Dockerfile` | Multi-stage Docker build for the monolith (Maven + Temurin 17 JRE; sources target Java 17) |
 | `Dockerfile.microservice` | Shared multi-stage build for all microservices |
 | `docker-compose.yml` | Monolith-path orchestration (MySQL + Redis + backend) |
 | `docker-compose-infra.yml` | Middleware: Nacos + RocketMQ + Seata |

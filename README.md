@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Spring_Boot-2.7.9-6DB33F" alt="Spring Boot">
-  <img src="https://img.shields.io/badge/Spring_Cloud-2021.0.9-6DB33F" alt="Spring Cloud">
+  <img src="https://img.shields.io/badge/Spring_Boot-3.4.5-6DB33F" alt="Spring Boot">
+  <img src="https://img.shields.io/badge/Spring_Cloud-2024.0.0-6DB33F" alt="Spring Cloud">
   <img src="https://img.shields.io/badge/Nacos-2.2.3-1E6FFF" alt="Nacos">
-  <img src="https://img.shields.io/badge/RocketMQ-4.9.7-D77310" alt="RocketMQ">
+  <img src="https://img.shields.io/badge/RocketMQ-2.3.3-D77310" alt="RocketMQ">
   <img src="https://img.shields.io/badge/Vue.js-3.x-4FC08D" alt="Vue.js">
-  <img src="https://img.shields.io/badge/MyBatis--Plus-3.5.3-1693E6" alt="MyBatis-Plus">
+  <img src="https://img.shields.io/badge/MyBatis--Plus-3.5.12-1693E6" alt="MyBatis-Plus">
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1" alt="MySQL">
   <img src="https://img.shields.io/badge/Redis-7.x-DC382D" alt="Redis">
   <img src="https://img.shields.io/badge/微信小程序-原生-09B83E" alt="WeChat Mini Program">
@@ -176,16 +176,16 @@ grep -rE "(123456|admin123|sk-[a-zA-Z0-9]{20,})" --include="*.java" --include="*
 
 | 技术 | 版本 | 用途 |
 |---|---|---|
-| Java | 8 | 编程语言 |
-| Spring Boot | 2.7.9 | 应用框架 |
-| Spring Cloud | 2021.0.9 | 微服务框架（Gateway / LoadBalancer / Bootstrap） |
-| Spring Cloud Alibaba | 2021.0.5.0 | Nacos 服务发现 + Sentinel 限流 |
+| Java | 17 | 编程语言 |
+| Spring Boot | 3.4.5 | 应用框架 |
+| Spring Cloud | 2024.0.0 | 微服务框架（Gateway / LoadBalancer / Bootstrap） |
+| Spring Cloud Alibaba | 2023.0.3.4 | Nacos 服务发现 + Sentinel 限流 |
 | Nacos | 2.2.3 | 注册中心 + 配置中心 |
-| RocketMQ | 4.9.7 | 异步消息（订单域） |
-| Seata | 1.6.1 | 分布式事务（AT 模式） |
+| RocketMQ | 2.3.3 | 异步消息（订单域） |
+| Seata | 1.8.0 | 分布式事务（AT 模式） |
 | Sentinel | - | 网关限流熔断 |
-| Spring Security | 5.7.x | 安全框架 |
-| MyBatis-Plus | 3.5.3.1 | ORM（不用 JPA） |
+| Spring Security | 6.4.x（Boot 3.4.5 管理） | 安全框架 |
+| MyBatis-Plus | 3.5.12 | ORM（不用 JPA） |
 | MySQL | 8.0.33 | 关系型数据库 |
 | Redis (Lettuce) | 7.x | 缓存 / 验证码 / 分布式 session |
 | HikariCP | 4.x | JDBC 连接池（最大 50 线程） |
@@ -720,7 +720,7 @@ mall_system_extended/
 ├── ai-service/                       # AI 微服务（:8086，DeepSeek + RAG）
 ├── common/                           # 微服务公共模块（实体/工具/统一返回）
 │
-├── backend/                          # 后端单体（Spring Boot 2.7.9，保留）
+├── backend/                          # 后端单体（Spring Boot 3.4.5，保留）
 │   ├── src/main/java/com/example/minimall/
 │   │   ├── MinimaMallApplication.java
 │   │   ├── annotation/ common/ config/ constants/ context/

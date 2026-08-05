@@ -63,11 +63,18 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 8
+          # 2026-08 迁移后：全部 9 个服务已迁 Spring Boot 3.4.5 + Java 17（见 docs/JAVA17_SPRING_AI_MIGRATION_PLAN.md）
+          java-version: 17
           cache: maven
 
       - name: Load database schema
         run: mysql -h127.0.0.1 -uroot -p123456 --default-character-set=utf8mb4 minimall < src/main/resources/sql/init_database.sql
+
+      # HNSW 纯单测（无 DB 依赖）：随机源共享 + 参数对齐生产（M=16/efCons=200）。
+      # 独立于全量套件先跑，回归时快速定位（历史教训：randomVector 每次 new Random(seed)
+      # 产生相同向量导致 top-1 随机失败，见 HnswIndexTest 注释与 e1e3104）。
+      - name: HNSW smoke (pure unit test)
+        run: mvn -B test -Dtest=HnswIndexTest -DfailIfNoTests=false
 
       - name: Run tests
         run: mvn -B test

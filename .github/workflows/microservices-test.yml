@@ -48,7 +48,8 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 8
+          # 2026-08 迁移后：全部服务已迁 Spring Boot 3.4.5 + Java 17（见 docs/JAVA17_SPRING_AI_MIGRATION_PLAN.md）
+          java-version: 17
           cache: maven
 
       # 各服务均依赖 minimall-common，先安装到本地仓库
