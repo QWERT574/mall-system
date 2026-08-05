@@ -501,7 +501,7 @@ public class AIService {
 
 - 9 服务 `mvn clean compile`（JDK 17.0.12）全绿
 - gateway 4/4、order 2/2 测试与基线一致；backend 纯单测 27/27 绿
-- **运行时完整回归（2026-08-05 收尾，Nacos+Redis+MySQL 全环境就绪）**：backend **321 测试仅 1 失败 0 错误**——唯一失败为 HnswIndexTest.testLargeScalePerformance（既有脆弱测试：无种子随机向量 + HNSW 近似检索 top-1 精确断言，代码迁移零改动 git diff=0，与迁移无关）；此前因环境受限的 ChatControllerTest(9)/ChatMessageDeliveryE2ETest(6)/AdminInterventionIntegrationTest(9) 等 context 测试全部通过
+- **运行时完整回归（2026-08-05 收尾，Nacos+Redis+MySQL 全环境就绪）**：backend **321 测试 0 失败 0 错误全绿**（首次全绿）。此前唯一失败 HnswIndexTest 已修复——根因是**测试的随机源设计 bug**：`randomVector()` 每次 `new Random(seed)` 生成**完全相同向量**（base==far、批量点全部重合），HNSW 同分时 top-1 取决于堆序而随机失败；修复=共享 `Random` 实例（固定种子、每次调用不同向量）+ 测试参数对齐生产（M=16/efCons=200，生产 VectorStoreService 配置）；诊断脚本实测 M=8 时 top1 召回仅 0.68（图过稀疏）
 - 环境坑记录：Windows 端口 13306 落在 Hyper-V 保留段（13253-13352）导致 Docker bind 失败 → 改用 3307；minimall-mysql 容器 root 密码为 `ChangeMe_RootPass_2026`（非 123456）；测试用 `SPRING_DATASOURCE_*` 环境变量覆盖 JDBC 指向 3307
 - 部署联动：Dockerfile/railway.toml 已是 temurin-17（无需改动）
 
