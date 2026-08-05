@@ -6,10 +6,12 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:minimall}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+  # 迁移：Boot 3 中 spring.redis.* 前缀迁移到 spring.data.redis.*
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
   configuration:

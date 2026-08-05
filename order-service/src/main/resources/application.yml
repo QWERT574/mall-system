@@ -6,10 +6,12 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:minimall}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:123456}
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+  # 迁移：Boot 3 中 Redis 配置前缀由 spring.redis.* 改为 spring.data.redis.*
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 mybatis-plus:
   mapper-locations: classpath:mapper/*.xml
   configuration:
@@ -31,17 +33,18 @@ rocketmq:
     retry-times-when-send-failed: 2    # 失败重试 2 次
 
 # ===== Seata 分布式事务配置 =====
+# 迁移：Seata 1.7+ 中 registry/config 的 type 由小写值改为枚举（Nacos/File 等）
 seata:
   enabled: true
   tx-service-group: minimall-tx-group         # 事务分组（与 TC 集群名对应）
   registry:
-    type: nacos                               # 注册中心 — Nacos
+    type: Nacos                               # 注册中心 — Nacos
     nacos:
       server-addr: ${NACOS_HOST:localhost}:8848
       application: seata-server
       group: DEFAULT_GROUP
   config:
-    type: nacos                               # 配置中心 — Nacos
+    type: Nacos                               # 配置中心 — Nacos
     nacos:
       server-addr: ${NACOS_HOST:localhost}:8848
       group: DEFAULT_GROUP

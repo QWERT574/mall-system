@@ -2,11 +2,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- ===== 父 POM 沿用 Spring Boot 2.7.9 ===== -->
+    <!-- ===== 父 POM 迁移到 Spring Boot 3.4.5（Java 17 + jakarta） ===== -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.9</version>
+        <version>3.4.5</version>
         <relativePath/>
     </parent>
 
@@ -17,14 +17,17 @@
     <description>API 网关 — 统一入口、鉴权、路由、限流</description>
 
     <properties>
-        <java.version>8</java.version>
-        <spring-cloud.version>2021.0.9</spring-cloud.version>
-        <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
+        <java.version>17</java.version>
+        <!-- Spring Cloud & Alibaba 版本 — 和 Spring Boot 3.4.5 对齐
+             注意：Spring Cloud Alibaba 官方从未发布 2024.0.0（2023.0.x 之后直接跳到 2025.0.0.0，
+             后者对应 Spring Cloud 2025 / Boot 3.5）。Boot 3.4.x 使用 SCA 2023.0.3.x（社区验证组合）。 -->
+        <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <spring-cloud-alibaba.version>2023.0.3.4</spring-cloud-alibaba.version>
     </properties>
 
     <!-- ⭐ Gateway 用 WebFlux（响应式），不能用 spring-boot-starter-web -->
     <dependencies>
-        <!-- Spring Cloud Gateway 核心 -->
+        <!-- Spring Cloud Gateway 核心（版本随 SC 2024.0.0 BOM 管理，无需单独版本号） -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-gateway</artifactId>
@@ -48,7 +51,7 @@
             <artifactId>spring-cloud-starter-loadbalancer</artifactId>
         </dependency>
 
-        <!-- Sentinel 网关限流 -->
+        <!-- Sentinel 网关限流（适配 SCA 2023.0.3.4，版本由 SCA BOM 管理） -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-alibaba-sentinel-gateway</artifactId>
@@ -59,22 +62,22 @@
             <artifactId>sentinel-datasource-extension</artifactId>
         </dependency>
 
-        <!-- JWT 解析 -->
+        <!-- JWT 解析（迁移：0.11.5 → 0.12.6，API 用 parser().verifyWith()） -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
 

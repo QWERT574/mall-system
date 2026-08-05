@@ -1,10 +1,17 @@
 package com.example.minimall.utils;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.PostConstruct;
+import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
@@ -13,6 +20,15 @@ import java.util.Date;
  *
  * <p>使用 HS256 对称加密算法，密钥通过 application.yml / 环境变量注入，
  * 默认值仅供本地开发快速启动使用。
+ *
+ * <p>jjwt 0.12.x API 说明（Boot 3 迁移，见 docs/JAVA17_SPRING_AI_MIGRATION_PLAN.md 4.3）：
+ * <ul>
+ *   <li>签名：{@code Jwts.builder().signWith(Key)} —— 直接传 Key 对象（0.11 的
+ *       {@code signWith(alg, byte[])} 已删除，Key 由 {@link Keys#hmacShaKeyFor} 生成）</li>
+ *   <li>解析：{@code Jwts.parser().verifyWith(key).build().parseSignedClaims(token)}
+ *       —— 0.11 的 {@code parserBuilder()/setSigningKey()} 已废弃</li>
+ *   <li>异常：{@link SignatureException} 迁移到 {@code io.jsonwebtoken.security} 包</li>
+ * </ul>
  */
 @Component
 public class JwtUtil {
@@ -25,9 +41,13 @@ public class JwtUtil {
 
     private long expirationTime; // 兼容旧代码中使用的毫秒为单位
 
+    /** 缓存签名密钥：HMAC-SHA 密钥由 secret 派生，只需生成一次。 */
+    private SecretKey secretKey;
+
     @PostConstruct
     public void init() {
         this.expirationTime = this.expirationTimeMillis;
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -42,12 +62,12 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + expirationTime);
 
         return Jwts.builder()
-                .setSubject(String.valueOf(userId))
+                .subject(String.valueOf(userId))
                 .claim("userId", userId)
                 .claim("username", username)
-                .setIssuedAt(now)
-                .setExpiration(expiryDate)
-                .signWith(SignatureAlgorithm.HS256, secret.getBytes(StandardCharsets.UTF_8))
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(secretKey)
                 .compact();
     }
 
@@ -58,10 +78,9 @@ public class JwtUtil {
      * @return 用户名
      */
     public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(secret.getBytes(StandardCharsets.UTF_8))
-                .parseClaimsJws(token)
-                .getBody();
+        Claims claims = Jwts.parser().verifyWith(secretKey).build()
+                .parseSignedClaims(token)
+                .getPayload();
         return claims.get("username", String.class);
     }
 
@@ -72,11 +91,9 @@ public class JwtUtil {
      * @return 用户 ID
      */
     public Long getUserIdFromToken(String token) {
-        Claims claims = Jwts.parserBuilder()
-                .setSigningKey(secret.getBytes(StandardCharsets.UTF_8))
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        Claims claims = Jwts.parser().verifyWith(secretKey).build()
+                .parseSignedClaims(token)
+                .getPayload();
         return claims.get("userId", Long.class);
     }
 
@@ -88,7 +105,7 @@ public class JwtUtil {
      */
     public Boolean validateToken(String token) {
         try {
-            Jwts.parser().setSigningKey(secret.getBytes(StandardCharsets.UTF_8)).parseClaimsJws(token);
+            Jwts.parser().verifyWith(secretKey).build().parseSignedClaims(token);
             return true;
         } catch (SignatureException ex) {
             System.err.println("Invalid JWT signature");

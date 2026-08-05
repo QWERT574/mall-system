@@ -68,7 +68,7 @@
 
 - **Spring AI 1.0.0 GA 的 BOM 基于 Spring Boot 3.4.x** → 所以 Boot 必须 ≥ 3.4，不能用更"稳"的 3.2 线（否则 Spring AI 装不上）。
 - **Boot 3.4 对应的 Spring Cloud 线是 2024.0.x**（版本命名 = 年份.0.小版本，Boot 与 Cloud 版本严格对齐，混用必炸）。
-- **Boot 3.4 对应的 Spring Cloud Alibaba 线是 2024.0.0**（SCA 官方版本表：2021→Boot2.6、2022→Boot3.0、2023→Boot3.2、2024→Boot3.4）。
+- **Boot 3.4 对应的 Spring Cloud Alibaba 线是 2023.0.3.4**（⚠️ 实测纠偏：SCA **从未发布 2024.x 线**，Maven Central 版本序列为 2021→2022→2023.0.3.4→2025.0.0.0。2023.0.3.4 是最后基于 SC Commons 4.x 的稳定版，与 SC 2024.0.0 + Boot 3.4 为社区标准组合；2025.0.0.0 对应 Boot 3.5 不适用）。
 - **Boot 3 强制 Java 17+**，所以 Java 8 → 17 是门票，不是可选项。
 - **javax → jakarta**：Java EE 2017 年捐给 Eclipse 基金会改名 Jakarta EE，包名从 `javax.*` 改为 `jakarta.*`。Boot 3 全面切换，93 个文件受影响。
 
@@ -79,7 +79,7 @@
 | Java | **17** | Boot 3.4 最低要求；LTS 长期支持 |
 | Spring Boot | **3.4.x**（3.4.5+） | Spring AI 1.0.0 官方基于 3.4 |
 | Spring Cloud | **2024.0.x**（2024.0.1+） | 与 Boot 3.4 官方对齐 |
-| Spring Cloud Alibaba | **2024.0.0** | SCA 官方对应 Boot 3.4；Sentinel 仍为 1.8.x 适配 |
+| Spring Cloud Alibaba | **2023.0.3.4** | ⚠️ 非 2024.0.0（该版本不存在）；2023.0.3.4 与 SC 2024.0.0/Boot 3.4 为实测可用组合 |
 | Spring AI | **1.0.0**（BOM 管理） | `spring-ai-bom` 已实测存在于 Maven Central |
 | Spring AI DeepSeek | **1.0.0**（`spring-ai-starter-model-deepseek`） | 已实测存在；DeepSeek 官方 starter，非 OpenAI 兼容绕行 |
 | MyBatis-Plus | **3.5.12**（`mybatis-plus-spring-boot3-starter`） | **artifactId 变了**，boot3 专用 |
@@ -89,7 +89,7 @@
 | mysql 驱动 | `com.mysql:mysql-connector-j` | Boot 3 管理版本，**groupId 从 `mysql` 改为 `com.mysql`** |
 | Lombok | 1.18.34+ | 保险起见升一下 |
 
-> ⚠️ 小版本号（3.4.x 的 x、2024.0.x 的 x）以执行当天 Maven Central / 官方 release notes 为准。**大版本线（3.4 / 2024.0 / 2024.0.0 / 1.0.0）不要动**，这是被官方版本矩阵锁死的。
+> ⚠️ 小版本号（3.4.x 的 x、2024.0.x 的 x）以执行当天 Maven Central / 官方 release notes 为准。**大版本线（3.4 / 2024.0 / 2023.0.3.4 / 1.0.0）不要动**，这是被官方版本矩阵锁死的。SCA 2024.0.0 不存在（实测），勿再尝试。
 
 ---
 
@@ -109,7 +109,7 @@
 
 | 改动 | 内容 |
 |---|---|
-| pom | Boot 3.4.x + Cloud 2024.0.x + SCA 2024.0.0 + Java 17；MyBatis-Plus 换 boot3 starter |
+| pom | Boot 3.4.x + Cloud 2024.0.x + SCA 2023.0.3.4 + Java 17；MyBatis-Plus 换 boot3 starter + mybatis-plus-jsqlparser |
 | 代码 | javax→jakarta；SecurityConfig 重写；`spring.factories` → `AutoConfiguration.imports`（如有） |
 | 验收 | 编译 + 启动 + 登录/注册接口 smoke test |
 
@@ -476,3 +476,37 @@ public class AIService {
 ---
 
 *文档结束。执行前请先完成阶段 0 基线并 review 版本矩阵，任何版本号调整需在文档中留痕。*
+
+---
+
+## 附录 A：执行记录（2026-08-05 阶段一完成）
+
+### 实测纠偏（与正文不一致处以本附录为准）
+
+| 项 | 计划文档初稿 | 实测结果 |
+|---|---|---|
+| Spring Cloud Alibaba | 2024.0.0 | **不存在**（Maven Central 无 2024.x 线），实际用 **2023.0.3.4** |
+| MyBatis-Plus | 3.5.12 boot3 starter | 还需 **mybatis-plus-jsqlparser 3.5.12**（3.5.9+ 分页插件拆包） |
+| javax 迁移范围 | 全部替换 | **只换 EE 包**（servlet/validation/annotation/persistence/transaction）；javax.imageio/sql/crypto 等 JDK 库保持 javax |
+
+### 迁移中踩坑清单（后续项目可复用）
+
+1. **Security 6.4 移除 `hasIpAddress`**：改 `IpAddressAuthorizationManager.hasIpAddress(...)`，包路径 `org.springframework.security.web.access`，**必须用静态工厂**（构造器 package-private）。
+2. **Spring Framework 6.2 移除 Apache HttpClient 4**：`HttpComponentsClientHttpRequestFactory` 只支持 hc5；hc4 代码需迁移（`RequestConfig.custom().setConnectTimeout(Timeout.ofMilliseconds(...))`、`execute` 返回 `CloseableHttpResponse`、`getCode()` 替代 `getStatusLine().getStatusCode()`）。另外 Spring 6.1 起该 factory 类同时引用 hc4/hc5 类，缺 httpclient5 依赖会编译失败。
+3. **Boot 3 内部包重命名**：`org.springframework.boot.web.server.LocalServerPort` → `org.springframework.boot.test.web.server.LocalServerPort`（测试代码）。
+4. **MyBatis-Plus 3.5.9+ 批量重载歧义**：`updateById(any())` 编译歧义（T vs Collection<T> 重载），需 `any(Cart.class)`。
+5. **Git-bash + Windows 工具链**：javac/java/jar 需要 cygpath 转换路径、`-encoding UTF-8`、classpath 用分号；Python 正则处理 CRLF 文件时 `$` 锚定需 `\r?$` + `re.MULTILINE`。
+
+### 阶段一验收结果
+
+- 9 服务 `mvn clean compile`（JDK 17.0.12）全绿
+- gateway 4/4、order 2/2 测试与基线一致；backend 纯单测 27/27 绿
+- backend context 测试（15 个）因本地 Nacos/Redis 未启动受限（环境问题，非迁移问题）
+- 部署联动待办：railway.toml / Dockerfile / k8s 的 JDK 8 → 17 基础镜像（未执行）
+
+### 阶段二（Spring AI）状态
+
+- [ ] ai-service 引入 spring-ai-bom 1.0.0 + spring-ai-starter-model-deepseek
+- [ ] AIService 裸 HTTP → ChatClient（保留自研检索链路）
+- [ ] 流式 SSE + 结构化输出 demo
+- [ ] 模型切换（DeepSeek→Ollama）演示

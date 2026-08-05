@@ -7,8 +7,8 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 import java.io.IOException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,7 +89,7 @@ class TraceIdFilterTest {
         volatile String capturedTraceId;
 
         @Override
-        public void doFilter(javax.servlet.ServletRequest request, javax.servlet.ServletResponse response)
+        public void doFilter(jakarta.servlet.ServletRequest request, jakarta.servlet.ServletResponse response)
                 throws IOException, ServletException {
             this.capturedTraceId = MDC.get(TraceIdFilter.MDC_TRACE_ID);
         }

@@ -38,18 +38,20 @@ spring:
     open-in-view: false
   
   # Redis 配置（已启用）
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-    database: ${REDIS_DATABASE:0}
-    timeout: 5000
-    lettuce:
-      pool:
-        max-active: 50
-        max-idle: 20
-        min-idle: 5
-        max-wait: -1ms
+  # 迁移：Boot 3 中 spring.redis.* 前缀迁移到 spring.data.redis.*
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 50
+          max-idle: 20
+          min-idle: 5
+          max-wait: -1ms
   
   # 缓存配置
   cache:

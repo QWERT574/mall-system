@@ -61,7 +61,7 @@ class CartServiceTest {
         // 验证不再调用先查后写
         verify(cartMapper, never()).selectOne(any());
         verify(cartMapper, never()).selectList(any());
-        verify(cartMapper, never()).updateById(any());
+        verify(cartMapper, never()).updateById(any(Cart.class));
         verify(cartMapper, never()).insert(any(Cart.class));
     }
 

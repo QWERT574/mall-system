@@ -5,10 +5,11 @@ import com.example.minimall.mapper.AIServiceLogMapper;
 import com.example.minimall.model.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.core5.util.Timeout;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
@@ -88,9 +89,9 @@ public class AIService {
     // 创建带有连接池和超时配置的RestTemplate
     private RestTemplate createRestTemplate() {
         RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(10000)
-                .setConnectionRequestTimeout(10000)
-                .setSocketTimeout(30000)
+                .setConnectTimeout(Timeout.ofMilliseconds(10000))
+                .setConnectionRequestTimeout(Timeout.ofMilliseconds(10000))
+                .setResponseTimeout(Timeout.ofMilliseconds(30000))
                 .build();
 
         PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
@@ -435,23 +436,23 @@ public class AIService {
                 String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
                 logger.info("请求DeepSeek API: URL={}, model={}", deepSeekConfig.getApiUrl(), deepSeekConfig.getModel());
 
-                org.apache.http.client.methods.HttpPost httpPost =
-                    new org.apache.http.client.methods.HttpPost(deepSeekConfig.getApiUrl());
+                org.apache.hc.client5.http.classic.methods.HttpPost httpPost =
+                    new org.apache.hc.client5.http.classic.methods.HttpPost(deepSeekConfig.getApiUrl());
                 httpPost.setHeader("Content-Type", "application/json");
                 httpPost.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
-                httpPost.setEntity(new org.apache.http.entity.StringEntity(requestJson, "UTF-8"));
+                httpPost.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity(requestJson, org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
 
                 RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(10000)
-                    .setSocketTimeout(60000)
+                    .setConnectTimeout(Timeout.ofMilliseconds(10000))
+                    .setResponseTimeout(Timeout.ofMilliseconds(60000))
                     .build();
 
                 try (CloseableHttpClient httpClient = HttpClients.custom()
                         .setDefaultRequestConfig(requestConfig)
                         .build()) {
 
-                    org.apache.http.HttpResponse response = httpClient.execute(httpPost);
-                    int statusCode = response.getStatusLine().getStatusCode();
+                    org.apache.hc.client5.http.impl.classic.CloseableHttpResponse response = httpClient.execute(httpPost);
+                    int statusCode = response.getCode();
                     logger.info("DeepSeek API响应状态码: {}", statusCode);
 
                     if (statusCode != 200) {
@@ -1725,19 +1726,19 @@ public class AIService {
                 requestBody.put("messages", messages);
 
                 String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
-                org.apache.http.client.methods.HttpPost httpPost =
-                        new org.apache.http.client.methods.HttpPost(deepSeekConfig.getApiUrl());
+                org.apache.hc.client5.http.classic.methods.HttpPost httpPost =
+                        new org.apache.hc.client5.http.classic.methods.HttpPost(deepSeekConfig.getApiUrl());
                 httpPost.setHeader("Content-Type", "application/json");
                 httpPost.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
-                httpPost.setEntity(new org.apache.http.entity.StringEntity(requestJson, "UTF-8"));
+                httpPost.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity(requestJson, org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
 
                 RequestConfig requestConfig = RequestConfig.custom()
-                        .setConnectTimeout(10000).setSocketTimeout(60000).build();
+                        .setConnectTimeout(Timeout.ofMilliseconds(10000)).setResponseTimeout(Timeout.ofMilliseconds(60000)).build();
 
                 try (CloseableHttpClient httpClient = HttpClients.custom()
                         .setDefaultRequestConfig(requestConfig).build()) {
-                    org.apache.http.HttpResponse response = httpClient.execute(httpPost);
-                    int statusCode = response.getStatusLine().getStatusCode();
+                    org.apache.hc.client5.http.impl.classic.CloseableHttpResponse response = httpClient.execute(httpPost);
+                    int statusCode = response.getCode();
 
                     if (statusCode != 200) {
                         throw new RuntimeException("DeepSeek API返回错误状态码: " + statusCode);

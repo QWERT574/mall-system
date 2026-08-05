@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.9</version>
+        <version>3.4.5</version>
         <relativePath/>
     </parent>
 
@@ -17,7 +17,7 @@
     <description>公共模块 — 所有微服务共享的 Result/JWT/异常/枚举/DTO（瘦身版：仅依赖 spring-web）</description>
 
     <properties>
-        <java.version>8</java.version>
+        <java.version>17</java.version>
     </properties>
 
     <dependencies>
@@ -27,30 +27,29 @@
             <artifactId>spring-web</artifactId>
         </dependency>
 
-        <!-- JWT -->
+        <!-- JWT (0.12.x: jakarta 线，API 大改见 docs/JAVA17_SPRING_AI_MIGRATION_PLAN.md 4.3) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
+            <version>0.12.6</version>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Servlet API -->
+        <!-- Servlet API (Boot 3 = jakarta 线) -->
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>javax.servlet-api</artifactId>
-            <version>4.0.1</version>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -75,11 +74,11 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.10.1</version>
                 <configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>17</source>
+                    <target>17</target>
                     <compilerArgs><arg>-parameters</arg></compilerArgs>
                     <annotationProcessorPaths>
-                        <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>1.18.30</version></path>
+                        <path><groupId>org.projectlombok</groupId><artifactId>lombok</artifactId><version>1.18.34</version></path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
