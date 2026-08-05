@@ -109,6 +109,9 @@ application-*.properties
 application-*.yml
 !application.yml
 !application.properties
+# 测试专用配置必须入库：CI 依赖 application-test.yml 的测试密钥（jwt.secret 等），
+# 否则主配置 ${JWT_SECRET} 嵌套占位符在 CI 环境解析失败（backend-test 历史红灯根因）
+!application-test.yml
 
 # 数据库备份
 *.sql.backup
