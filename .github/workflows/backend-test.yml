@@ -70,6 +70,11 @@ jobs:
       - name: Load database schema
         run: mysql -h127.0.0.1 -uroot -p123456 --default-character-set=utf8mb4 minimall < src/main/resources/sql/init_database.sql
 
+      # 迁移后 backend 依赖 minimall-common（JwtUtil/Result 等移入 common），先安装到本地仓库
+      - name: Install shared common module
+        working-directory: common
+        run: mvn -B -q install -DskipTests
+
       # HNSW 纯单测（无 DB 依赖）：随机源共享 + 参数对齐生产（M=16/efCons=200）。
       # 独立于全量套件先跑，回归时快速定位（历史教训：randomVector 每次 new Random(seed)
       # 产生相同向量导致 top-1 随机失败，见 HnswIndexTest 注释与 e1e3104）。
