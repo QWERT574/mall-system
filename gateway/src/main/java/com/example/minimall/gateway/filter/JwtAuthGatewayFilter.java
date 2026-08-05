@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -135,13 +136,12 @@ public class JwtAuthGatewayFilter implements GlobalFilter, Ordered {
 
         String token = authHeader.substring(7); // 去掉 "Bearer " 前缀
 
-        // ── 3. 校验 Token ──
+        // ── 3. 校验 Token（jjwt 0.12.x API：parser().verifyWith() + parseSignedClaims）──
         try {
-            Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8))
-                    .build()
-                    .parseClaimsJws(token)
-                    .getBody();
+            javax.crypto.SecretKey secretKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+            Claims claims = Jwts.parser().verifyWith(secretKey).build()
+                    .parseSignedClaims(token)
+                    .getPayload();
 
             Long userId = claims.get("userId", Long.class);
             String role = claims.get("role", String.class);

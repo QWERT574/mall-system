@@ -1,0 +1,111 @@
+server:
+  port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  # 测试环境不连 Nacos/Sentinel（CI 无中间件容器；本地有 Nacos 时也无意义）
+  # 对齐 gateway GatewayRouteSmokeTest 的既有先例
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    sentinel:
+      enabled: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/minimall?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&characterSetResults=utf8mb4&characterSetServer=utf8mb4&collationServer=utf8mb4_unicode_ci&connectionCollation=utf8mb4_unicode_ci&useLegacyDatetimeCode=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 2
+      connection-timeout: 20000
+      pool-name: MinimallTestHikariCP
+  sql:
+    init:
+      mode: never
+      continue-on-error: true
+      platform: mysql
+      encoding: UTF-8
+  jpa:
+    open-in-view: false
+
+  # 迁移：Boot 3 中 spring.redis.* 前缀迁移到 spring.data.redis.*
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 1
+      timeout: 5000
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+          max-wait: -1ms
+
+  cache:
+    type: none
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    lazy-loading-enabled: false
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      table-prefix: ""
+    banner: false
+
+logging:
+  level:
+    root: WARN
+    com.example.minimall: WARN
+    org.springframework: WARN
+    org.apache: WARN
+    javax.sql: WARN
+
+# JWT 测试专用密钥（仅单测上下文使用，生产环境仍强制走 JWT_SECRET 环境变量）
+jwt:
+  secret: unit-test-only-secret-key-256bit-1234567890abcdef
+  expiration: 86400000
+
+# 内部服务间令牌（测试专用）
+internal:
+  token: unit-test-internal-token
+
+deepseek:
+  api-key: test-key-for-unit-test
+  api-url: https://api.deepseek.com/chat/completions
+  model: deepseek-chat
+  temperature: 0.7
+  max-tokens: 2048
+
+ai:
+  reply:
+    common-queries: "test"
+    recommend-products: "test"
+
+upload:
+  location: uploads
+  max-size: 10485760
+  allowed-types: image/jpeg,image/png,image/gif,image/webp
+  url-prefix: /uploads/
+
+spring.servlet.multipart:
+  max-file-size: 10MB
+  max-request-size: 50MB
+  file-size-threshold: 2MB

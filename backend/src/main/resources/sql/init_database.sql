@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS user (
     password VARCHAR(255) DEFAULT NULL COMMENT '密码（加密存储）',
     nickname VARCHAR(50) DEFAULT NULL COMMENT '昵称',
     avatar VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
+    email VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
+    birthday DATE DEFAULT NULL COMMENT '生日',
+    gender TINYINT DEFAULT 0 COMMENT '性别：0-未知，1-男，2-女',
     role_id BIGINT DEFAULT NULL COMMENT '角色ID',
     user_type INT DEFAULT 0 COMMENT '用户类型：0-普通用户，1-商品提供方，2-管理员',
     company_name VARCHAR(100) DEFAULT NULL COMMENT '公司名称（商品提供方）',
@@ -76,37 +79,34 @@ CREATE TABLE IF NOT EXISTS product_category (
 -- 商品表
 CREATE TABLE IF NOT EXISTS product (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '商品ID',
-    name VARCHAR(100) NOT NULL COMMENT '商品名称',
-    description TEXT COMMENT '商品描述',
-    price DECIMAL(10,2) NOT NULL COMMENT '商品价格',
-    original_price DECIMAL(10,2) DEFAULT NULL COMMENT '原价',
-    stock INT DEFAULT 0 COMMENT '库存数量',
-    sales INT DEFAULT 0 COMMENT '销量',
+    name VARCHAR(255) NOT NULL COMMENT '商品名称',
     cover VARCHAR(255) DEFAULT NULL COMMENT '封面图片',
-    images TEXT COMMENT '商品图片（JSON格式）',
+    price DECIMAL(10,2) NOT NULL COMMENT '商品价格',
+    stock INT DEFAULT 0 COMMENT '库存数量',
+    description TEXT COMMENT '商品描述',
     category_id BIGINT DEFAULT NULL COMMENT '分类ID（允许 NULL，配合 ON DELETE SET NULL）',
-    supplier_id BIGINT DEFAULT NULL COMMENT '供应商ID',
-    status TINYINT DEFAULT 1 COMMENT '状态：0-下架，1-上架',
-    is_featured TINYINT DEFAULT 0 COMMENT '是否推荐：0-否，1-是',
+    seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
+    parent_category_id BIGINT DEFAULT NULL COMMENT '父分类ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE SET NULL,
-    FOREIGN KEY (supplier_id) REFERENCES user(id) ON DELETE SET NULL,
+    CONSTRAINT fk_product_category FOREIGN KEY (category_id) REFERENCES category(id) ON DELETE SET NULL,
+    CONSTRAINT fk_product_parent_category FOREIGN KEY (parent_category_id) REFERENCES category(id) ON DELETE SET NULL,
     INDEX idx_category_id (category_id),
-    INDEX idx_status (status),
-    INDEX idx_created_at (created_at),
-    INDEX idx_price (price),
-    INDEX idx_sales (sales),
-    INDEX idx_name (name),
-    INDEX idx_supplier_id (supplier_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
+    INDEX idx_parent_category_id (parent_category_id),
+    INDEX idx_product_seller (seller_id),
+    INDEX idx_product_category_price (category_id, price),
+    INDEX idx_product_name (name),
+    INDEX idx_product_stock (stock),
+    FULLTEXT KEY ft_product_search (name, description) WITH PARSER ngram,
+    FULLTEXT KEY ft_product_name (name) WITH PARSER ngram
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='商品表';
 
 -- 商品规格表
 CREATE TABLE IF NOT EXISTS product_spec (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '规格ID',
     product_id BIGINT NOT NULL COMMENT '商品ID',
     spec_name VARCHAR(50) NOT NULL COMMENT '规格名称',
-    spec_value VARCHAR(255) NOT NULL COMMENT '规格值',
+    description TEXT COMMENT '规格描述',
     price DECIMAL(10,2) NOT NULL COMMENT '规格价格',
     stock INT DEFAULT 0 COMMENT '规格库存',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -137,6 +137,9 @@ CREATE TABLE IF NOT EXISTS orders (
     remark TEXT COMMENT '订单备注',
     user_coupon_id BIGINT DEFAULT NULL COMMENT '使用的优惠券ID',
     discount_amount DECIMAL(10,2) DEFAULT 0 COMMENT '优惠抵扣金额',
+    total_price DECIMAL(10,2) DEFAULT NULL COMMENT '订单总价（兼容旧字段，业务用 total_amount）',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间（兼容旧字段，业务用 created_at）',
+    pay_time TIMESTAMP DEFAULT NULL COMMENT '支付时间',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
@@ -163,6 +166,7 @@ CREATE TABLE IF NOT EXISTS order_item (
     price DECIMAL(10,2) NOT NULL COMMENT '商品价格',
     quantity INT NOT NULL COMMENT '购买数量',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
     FOREIGN KEY (product_id) REFERENCES product(id) ON DELETE CASCADE,
     FOREIGN KEY (spec_id) REFERENCES product_spec(id) ON DELETE CASCADE,
@@ -205,6 +209,7 @@ CREATE TABLE IF NOT EXISTS logistics_trace (
 CREATE TABLE IF NOT EXISTS shipping_address (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '地址ID',
     user_id BIGINT NOT NULL COMMENT '用户ID',
+    name VARCHAR(50) DEFAULT NULL COMMENT '地址名称（如：家、公司）',
     consignee VARCHAR(20) NOT NULL COMMENT '收货人',
     phone VARCHAR(20) NOT NULL COMMENT '收货电话',
     province VARCHAR(50) NOT NULL COMMENT '省份',
@@ -225,6 +230,7 @@ CREATE TABLE IF NOT EXISTS search_history (
     user_id BIGINT NOT NULL COMMENT '用户ID',
     keyword VARCHAR(100) NOT NULL COMMENT '搜索关键词',
     search_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '搜索时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
     INDEX idx_search_time (search_time)
@@ -380,7 +386,9 @@ CREATE TABLE IF NOT EXISTS activity (
     current_participants INT DEFAULT 0 COMMENT '当前参与人数',
     status INT DEFAULT 0 COMMENT '活动状态：0-筹备中，1-进行中，2-已结束，3-已取消',
     cover_image VARCHAR(255) DEFAULT NULL COMMENT '活动封面图片',
-    created_by BIGINT NOT NULL COMMENT '创建人ID',
+    is_recommended TINYINT DEFAULT 0 COMMENT '是否推荐：0-否，1-是',
+    recommend_order INT DEFAULT 999 COMMENT '推荐排序（越小越靠前）',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE CASCADE,
@@ -466,6 +474,16 @@ CREATE TABLE IF NOT EXISTS after_sale_service (
     images TEXT COMMENT '售后凭证图片（JSON格式）',
     status INT DEFAULT 0 COMMENT '售后状态：0-待处理，1-处理中，2-已解决，3-已关闭',
     service_result TEXT COMMENT '处理结果',
+    refund_amount DECIMAL(10,2) DEFAULT NULL COMMENT '退款金额',
+    return_logistics VARCHAR(200) DEFAULT NULL COMMENT '退货物流单号',
+    return_logistics_company VARCHAR(100) DEFAULT NULL COMMENT '退货物流公司',
+    expect_complete_date DATETIME DEFAULT NULL COMMENT '预计完成时间',
+    close_reason TEXT COMMENT '关闭原因',
+    supplementary_evidence TEXT COMMENT '补充证据',
+    contact_phone VARCHAR(20) DEFAULT NULL COMMENT '联系电话',
+    processed_by BIGINT DEFAULT NULL COMMENT '处理人ID',
+    processed_at DATETIME DEFAULT NULL COMMENT '处理时间',
+    deleted TINYINT(1) DEFAULT 0 COMMENT '逻辑删除：0-正常，1-已删除',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
@@ -486,6 +504,7 @@ CREATE TABLE IF NOT EXISTS service_record (
     operation_type INT NOT NULL COMMENT '操作类型：1-创建工单，2-分配处理人，3-处理中，4-已解决，5-已关闭',
     operation_content TEXT NOT NULL COMMENT '操作内容',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (after_sale_id) REFERENCES after_sale_service(id) ON DELETE CASCADE,
     FOREIGN KEY (operator_id) REFERENCES user(id) ON DELETE CASCADE,
     INDEX idx_after_sale_id (after_sale_id)
@@ -698,6 +717,12 @@ INSERT IGNORE INTO category (id, name, parent_id, sort) VALUES
 (4, '粮油', 0, 4),
 (5, '干货', 0, 5),
 (6, '禽蛋', 0, 6);
+
+-- 测试活动数据（id=16 兜底；created_by 用 NULL——DataInitializer 启动会删除重建
+-- admin(id=1)，若此处引用 admin 会被 ON DELETE CASCADE 级联删除导致活动丢失，
+-- 与本地历史数据（created_by 全 NULL）保持一致）
+INSERT IGNORE INTO activity (id, title, description, start_time, end_time, activity_type, location, organizer, contact_person, contact_phone, max_participants, current_participants, status, created_by) VALUES 
+(16, '助农采摘节', '乡村振兴助农采摘活动', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 3, '示范农场', '村委会', '李主任', '13800138016', 100, 0, 1, NULL);
 
 -- ============================================
 -- 4. 初始化用户数据（重要！用于登录测试）
@@ -917,11 +942,11 @@ CREATE TABLE IF NOT EXISTS admin_intervention (
     order_id BIGINT DEFAULT NULL COMMENT '订单ID',
     product_id BIGINT DEFAULT NULL COMMENT '商品ID',
     seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
-    user_id BIGINT DEFAULT NULL COMMENT '用户ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
     session_id BIGINT DEFAULT NULL COMMENT '会话ID',
     aftersale_id BIGINT DEFAULT NULL COMMENT '售后单ID',
-    issue_type VARCHAR(50) DEFAULT NULL COMMENT '问题类型',
-    title VARCHAR(100) DEFAULT NULL COMMENT '标题',
+    issue_type VARCHAR(50) NOT NULL COMMENT '问题类型',
+    title VARCHAR(100) NOT NULL COMMENT '标题',
     description TEXT COMMENT '描述',
     evidence_images TEXT COMMENT '证据图片(JSON)',
     status INT DEFAULT 0 COMMENT '状态：0-待处理，1-处理中，2-已解决',

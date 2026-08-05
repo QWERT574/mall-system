@@ -4,7 +4,7 @@ import com.example.minimall.model.AfterSaleService;
 import com.example.minimall.service.AfterSaleServiceApi;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;

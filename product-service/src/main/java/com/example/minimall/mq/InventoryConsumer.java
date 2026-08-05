@@ -7,7 +7,7 @@ import org.apache.rocketmq.spring.core.RocketMQListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
+import jakarta.annotation.Resource;
 
 /**
  * 库存扣减消费者 — 监听 ORDER_CREATED 消息，异步扣减库存。

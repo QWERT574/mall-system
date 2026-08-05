@@ -37,10 +37,11 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -p123456"
-          --health-interval=10s
+          --health-cmd="mysqladmin ping -h127.0.0.1 -p123456"
+          --health-interval=5s
           --health-timeout=5s
-          --health-retries=10
+          --health-retries=20
+          --health-start-period=20s
 
       # application-test.yml: localhost:6379 无密码, database 1
       redis:
@@ -63,11 +64,37 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 8
+          # 2026-08 迁移后：全部 9 个服务已迁 Spring Boot 3.4.5 + Java 17（见 docs/JAVA17_SPRING_AI_MIGRATION_PLAN.md）
+          java-version: 17
           cache: maven
+
+      # 服务容器 health check 通过后 TCP 端口可能仍短暂未就绪（竞态），
+      # 用 mysqladmin ping 探测 127.0.0.1:3306 直到可用再灌 schema
+      - name: Wait for MySQL TCP ready
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h127.0.0.1 -P3306 -uroot -p123456 --silent 2>/dev/null; then
+              echo "MySQL ready after ${i}s"
+              break
+            fi
+            echo "waiting for MySQL... (${i}/30)"
+            sleep 1
+          done
+          mysqladmin ping -h127.0.0.1 -P3306 -uroot -p123456 || { echo "MySQL not ready after 30s"; exit 1; }
 
       - name: Load database schema
         run: mysql -h127.0.0.1 -uroot -p123456 --default-character-set=utf8mb4 minimall < src/main/resources/sql/init_database.sql
+
+      # 迁移后 backend 依赖 minimall-common（JwtUtil/Result 等移入 common），先安装到本地仓库
+      - name: Install shared common module
+        working-directory: common
+        run: mvn -B -q install -DskipTests
+
+      # HNSW 纯单测（无 DB 依赖）：随机源共享 + 参数对齐生产（M=16/efCons=200）。
+      # 独立于全量套件先跑，回归时快速定位（历史教训：randomVector 每次 new Random(seed)
+      # 产生相同向量导致 top-1 随机失败，见 HnswIndexTest 注释与 e1e3104）。
+      - name: HNSW smoke (pure unit test)
+        run: mvn -B test -Dtest=HnswIndexTest -DfailIfNoTests=false
 
       - name: Run tests
         run: mvn -B test

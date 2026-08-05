@@ -1,6 +1,6 @@
 package com.example.minimall.dto;
 
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 /**
  * 登录请求体（小程序扫码登录场景）。

@@ -25,8 +25,14 @@ class HnswIndexTest {
 
     private HnswIndex index;
     private static final int DIM = 128;
-    private static final int M = 8;
-    private static final int EF_CONSTRUCTION = 64;
+    // 对齐生产配置（VectorStoreService.HNSW_M=16 / HNSW_EF_CONSTRUCTION=200）：
+    // M=8 时图过于稀疏，5000 点规模下搜索路径无法到达查询点（top1 召回仅 ~0.68）
+    private static final int M = 16;
+    private static final int EF_CONSTRUCTION = 200;
+    // 共享随机源（固定种子）：保证每次调用产生不同向量（随机序列确定且可复现）。
+    // 陷阱：若 randomVector 内每次 new Random(seed)，所有调用会生成完全相同向量，
+    // 导致 "far" 与 base 相同、批量点全部重合——HNSW 同分时 top-1 取决于堆序而随机失败。
+    private final Random rnd = new Random(42);
 
     @BeforeEach
     void setUp() {
@@ -35,7 +41,6 @@ class HnswIndexTest {
 
     /** 生成指定维度的随机向量 */
     private float[] randomVector(int dim) {
-        Random rnd = new Random();
         float[] v = new float[dim];
         for (int i = 0; i < dim; i++) {
             v[i] = rnd.nextFloat();
@@ -45,7 +50,6 @@ class HnswIndexTest {
 
     /** 生成与目标向量接近的向量（添加少量噪声） */
     private float[] nearbyVector(float[] base, float noise) {
-        Random rnd = new Random();
         float[] v = new float[base.length];
         for (int i = 0; i < base.length; i++) {
             v[i] = base[i] + (rnd.nextFloat() - 0.5f) * noise;

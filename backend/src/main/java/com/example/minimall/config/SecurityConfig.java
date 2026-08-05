@@ -3,6 +3,7 @@ package com.example.minimall.config;
 import com.example.minimall.utils.JwtUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.web.access.IpAddressAuthorizationManager;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,65 +47,68 @@ public class SecurityConfig {
 
     /**
      * 装配安全过滤链：禁用 CSRF 与 Session、配置白名单与认证策略、注册 JWT 过滤器与 CORS。
+     * <p>
+     * 迁移说明（Boot 3 / Security 6）：旧版链式 DSL（authorizeRequests/antMatchers/.and()）已移除，
+     * 改为 lambda 风格 DSL：authorizeHttpRequests + requestMatchers。
+     * </p>
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             // 禁用 CSRF
-            .csrf().disable()
+            .csrf(csrf -> csrf.disable())
             // 禁用 Session
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // 配置授权规则（修复后：仅放行真正公开的接口）
-            .authorizeRequests()
+            .authorizeHttpRequests(auth -> auth
                 // ===== 认证相关（公开） =====
-                .antMatchers("/api/auth/**").permitAll()
-                .antMatchers("/api/captcha/**").permitAll()
-                .antMatchers("/api/sms/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/captcha/**").permitAll()
+                .requestMatchers("/api/sms/**").permitAll()
                 // ===== 商品/分类/活动/优惠 公开浏览 =====
-                .antMatchers("/api/product/list").permitAll()
-                .antMatchers("/api/product/search").permitAll()
-                .antMatchers("/api/product/category/**").permitAll()
-                .antMatchers("/api/product/recommended").permitAll()
-                .antMatchers("/api/product/hot").permitAll()
-                .antMatchers("/api/product/*").permitAll()         // /api/product/{id} 详情
-                .antMatchers("/api/product/*/specs").permitAll()   // /api/product/{id}/specs 规格
-                .antMatchers("/api/category/**").permitAll()
-                .antMatchers("/api/activity/list").permitAll()
-                .antMatchers("/api/activity/recommended").permitAll()
-                .antMatchers("/api/activity/*").permitAll()         // /api/activity/{id} 详情
-                .antMatchers("/api/coupon/available").permitAll()
-                .antMatchers("/api/coupon/list").permitAll()
-                .antMatchers("/api/coupon/calculate/*").permitAll()
-                .antMatchers("/api/discount/list").permitAll()
-                .antMatchers("/api/discount/active").permitAll()
-                .antMatchers("/api/discount/active-with-products").permitAll()
-                .antMatchers("/api/discount/*").permitAll()         // /api/discount/{id} 详情
+                .requestMatchers("/api/product/list").permitAll()
+                .requestMatchers("/api/product/search").permitAll()
+                .requestMatchers("/api/product/category/**").permitAll()
+                .requestMatchers("/api/product/recommended").permitAll()
+                .requestMatchers("/api/product/hot").permitAll()
+                .requestMatchers("/api/product/*").permitAll()         // /api/product/{id} 详情
+                .requestMatchers("/api/product/*/specs").permitAll()   // /api/product/{id}/specs 规格
+                .requestMatchers("/api/category/**").permitAll()
+                .requestMatchers("/api/activity/list").permitAll()
+                .requestMatchers("/api/activity/recommended").permitAll()
+                .requestMatchers("/api/activity/*").permitAll()         // /api/activity/{id} 详情
+                .requestMatchers("/api/coupon/available").permitAll()
+                .requestMatchers("/api/coupon/list").permitAll()
+                .requestMatchers("/api/coupon/calculate/*").permitAll()
+                .requestMatchers("/api/discount/list").permitAll()
+                .requestMatchers("/api/discount/active").permitAll()
+                .requestMatchers("/api/discount/active-with-products").permitAll()
+                .requestMatchers("/api/discount/*").permitAll()         // /api/discount/{id} 详情
                 // ===== 评价公开浏览 =====
-                .antMatchers("/api/review/list").permitAll()
-                .antMatchers("/api/review/product/**").permitAll()
+                .requestMatchers("/api/review/list").permitAll()
+                .requestMatchers("/api/review/product/**").permitAll()
                 // ===== AI 客服 + FAQ + 会话入口 =====
-                .antMatchers("/api/ai/**").permitAll()
-                .antMatchers("/api/faq/**").permitAll()
-                .antMatchers("/api/cs/**").permitAll()
+                .requestMatchers("/api/ai/**").permitAll()
+                .requestMatchers("/api/faq/**").permitAll()
+                .requestMatchers("/api/cs/**").permitAll()
                 // ===== 文件上传/下载 + 静态资源 =====
-                .antMatchers("/api/upload/**").permitAll()
-                .antMatchers("/uploads/**").permitAll()
-                .antMatchers("/images/**").permitAll()
+                .requestMatchers("/api/upload/**").permitAll()
+                .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/images/**").permitAll()
                 // ===== WebSocket 端点 =====
-                .antMatchers("/ws-chat/**").permitAll()
+                .requestMatchers("/ws-chat/**").permitAll()
                 // ===== 可观测性端点 (健康/指标/Prometheus) =====
                 // 健康检查公开供探针；其余 actuator 端点仅限本机(回环)访问，防止指标/环境信息泄露
-                .antMatchers("/actuator/health", "/actuator/info").permitAll()
-                .antMatchers("/actuator/**").hasIpAddress("127.0.0.1")
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                .requestMatchers("/actuator/**").access(IpAddressAuthorizationManager.hasIpAddress("127.0.0.1"))
                 // ===== 其他所有接口均需认证 =====
                 // 业务级角色控制（买家/卖家/管理员）由 PermissionInterceptor 进一步校验
                 .anyRequest().authenticated()
-            .and()
+            )
             // 添加 JWT 过滤器
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             // 配置 CORS
-            .cors().configurationSource(corsConfigurationSource());
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()));
 
         return http.build();
     }

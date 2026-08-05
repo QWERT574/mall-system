@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.9</version>
+        <version>3.4.5</version>
     </parent>
 
     <groupId>com.example</groupId>
@@ -14,9 +14,12 @@
     <name>MiniMall User Service</name>
 
     <properties>
-        <java.version>8</java.version>
-        <spring-cloud.version>2021.0.9</spring-cloud.version>
-        <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
+        <java.version>17</java.version>
+        <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <!-- 注意：Spring Cloud Alibaba 官方从未发布 2024.0.x 系列（2023.0.3.4 之后直接是 2025.0.0.0）。
+             2023.0.3.4 是 SCA 最后一个基于 Spring Cloud Commons 4.x 的稳定版，
+             与 Spring Cloud 2024.0.0（Commons 4.2.x）API 兼容，是 Boot 3.4 时代的社区标准组合。 -->
+        <spring-cloud-alibaba.version>2023.0.3.4</spring-cloud-alibaba.version>
     </properties>
 
     <dependencies>
@@ -37,16 +40,23 @@
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- MyBatis-Plus -->
+        <!-- MyBatis-Plus（Spring Boot 3 专用 starter：mybatis-plus-spring-boot3-starter） -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-boot-starter</artifactId>
-            <version>3.5.3.1</version>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>3.5.12</version>
         </dependency>
+        <!-- MyBatis-Plus 3.5.9+ 将基于 JSqlParser 的分页/乐观锁等插件拆分为独立模块，
+             不引入则 PaginationInnerInterceptor 等类在编译期缺失（3.5.12 中 starter 不再传递依赖它） -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>3.5.12</version>
+        </dependency>
+        <!-- MySQL 驱动：Boot 3 之后官方坐标改为 com.mysql:mysql-connector-j，版本由 Boot BOM 统一管理 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
