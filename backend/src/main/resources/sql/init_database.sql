@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS activity (
     cover_image VARCHAR(255) DEFAULT NULL COMMENT '活动封面图片',
     is_recommended TINYINT DEFAULT 0 COMMENT '是否推荐：0-否，1-是',
     recommend_order INT DEFAULT 999 COMMENT '推荐排序（越小越靠前）',
-    created_by BIGINT NOT NULL COMMENT '创建人ID',
+    created_by BIGINT DEFAULT NULL COMMENT '创建人ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE CASCADE,
@@ -718,9 +718,11 @@ INSERT IGNORE INTO category (id, name, parent_id, sort) VALUES
 (5, '干货', 0, 5),
 (6, '禽蛋', 0, 6);
 
--- 测试活动数据（id=16 供 DatabaseTableFunctionTest.testActivityImageSave 使用）
+-- 测试活动数据（id=16 兜底；created_by 用 NULL——DataInitializer 启动会删除重建
+-- admin(id=1)，若此处引用 admin 会被 ON DELETE CASCADE 级联删除导致活动丢失，
+-- 与本地历史数据（created_by 全 NULL）保持一致）
 INSERT IGNORE INTO activity (id, title, description, start_time, end_time, activity_type, location, organizer, contact_person, contact_phone, max_participants, current_participants, status, created_by) VALUES 
-(16, '助农采摘节', '乡村振兴助农采摘活动', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 3, '示范农场', '村委会', '李主任', '13800138016', 100, 0, 1, 1);
+(16, '助农采摘节', '乡村振兴助农采摘活动', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 3, '示范农场', '村委会', '李主任', '13800138016', 100, 0, 1, NULL);
 
 -- ============================================
 -- 4. 初始化用户数据（重要！用于登录测试）
