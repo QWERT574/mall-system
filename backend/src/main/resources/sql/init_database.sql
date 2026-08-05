@@ -106,7 +106,6 @@ CREATE TABLE IF NOT EXISTS product_spec (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '规格ID',
     product_id BIGINT NOT NULL COMMENT '商品ID',
     spec_name VARCHAR(50) NOT NULL COMMENT '规格名称',
-    spec_value VARCHAR(255) NOT NULL COMMENT '规格值',
     description TEXT COMMENT '规格描述',
     price DECIMAL(10,2) NOT NULL COMMENT '规格价格',
     stock INT DEFAULT 0 COMMENT '规格库存',
@@ -719,6 +718,10 @@ INSERT IGNORE INTO category (id, name, parent_id, sort) VALUES
 (5, '干货', 0, 5),
 (6, '禽蛋', 0, 6);
 
+-- 测试活动数据（id=16 供 DatabaseTableFunctionTest.testActivityImageSave 使用）
+INSERT IGNORE INTO activity (id, title, description, start_time, end_time, activity_type, location, organizer, contact_person, contact_phone, max_participants, current_participants, status, created_by) VALUES 
+(16, '助农采摘节', '乡村振兴助农采摘活动', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 3, '示范农场', '村委会', '李主任', '13800138016', 100, 0, 1, 1);
+
 -- ============================================
 -- 4. 初始化用户数据（重要！用于登录测试）
 -- ============================================
@@ -937,11 +940,11 @@ CREATE TABLE IF NOT EXISTS admin_intervention (
     order_id BIGINT DEFAULT NULL COMMENT '订单ID',
     product_id BIGINT DEFAULT NULL COMMENT '商品ID',
     seller_id BIGINT DEFAULT NULL COMMENT '商家ID',
-    user_id BIGINT DEFAULT NULL COMMENT '用户ID',
+    user_id BIGINT NOT NULL COMMENT '用户ID',
     session_id BIGINT DEFAULT NULL COMMENT '会话ID',
     aftersale_id BIGINT DEFAULT NULL COMMENT '售后单ID',
-    issue_type VARCHAR(50) DEFAULT NULL COMMENT '问题类型',
-    title VARCHAR(100) DEFAULT NULL COMMENT '标题',
+    issue_type VARCHAR(50) NOT NULL COMMENT '问题类型',
+    title VARCHAR(100) NOT NULL COMMENT '标题',
     description TEXT COMMENT '描述',
     evidence_images TEXT COMMENT '证据图片(JSON)',
     status INT DEFAULT 0 COMMENT '状态：0-待处理，1-处理中，2-已解决',

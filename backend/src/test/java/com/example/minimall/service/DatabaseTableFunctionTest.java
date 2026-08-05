@@ -36,6 +36,7 @@ class DatabaseTableFunctionTest {
     @Autowired private CartMapper cartMapper;
     @Autowired private CouponMapper couponMapper;
     @Autowired private UserMapper userMapper;
+    @Autowired private ActivityMapper activityMapper;
 
     // ===== User 表测试 =====
 
@@ -270,8 +271,14 @@ class DatabaseTableFunctionTest {
     @Test
     @Order(60)
     void testActivityImageSave() {
+        // 不硬编码 activity id：CI 环境由 DataInitializer 插入（id 1-4），本地库有历史数据（含 id=16）。
+        // 动态取第一条真实 activity，保证任何数据基线都通过。
+        List<Activity> activities = activityMapper.selectList(null);
+        if (activities.isEmpty()) {
+            fail("activity 表为空，无法测试 ActivityImage 保存");
+        }
         ActivityImage image = new ActivityImage();
-        image.setActivityId(16L);
+        image.setActivityId(activities.get(0).getId());
         image.setImageUrl("/uploads/activity/test.jpg");
         image.setSort(1);
         image.setCreatedAt(LocalDateTime.now());
@@ -281,7 +288,11 @@ class DatabaseTableFunctionTest {
     @Test
     @Order(61)
     void testActivityImageFindByActivityId() {
-        List<ActivityImage> images = activityImageService.findByActivityId(16L);
+        List<Activity> activities = activityMapper.selectList(null);
+        if (activities.isEmpty()) {
+            fail("activity 表为空，无法测试 ActivityImage 查询");
+        }
+        List<ActivityImage> images = activityImageService.findByActivityId(activities.get(0).getId());
         assertNotNull(images);
     }
 
