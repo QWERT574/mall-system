@@ -5,21 +5,14 @@ import com.example.minimall.mapper.AIServiceLogMapper;
 import com.example.minimall.model.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hc.client5.http.config.RequestConfig;
-import org.apache.hc.core5.util.Timeout;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.http.*;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -41,8 +34,8 @@ public class AIService {
     private final com.example.minimall.feign.ProductFeignClient productFeignClient;
     /** 订单 Feign 客户端（跨域查订单/物流/售后，替代原本地 OrderService/LogisticsService/AfterSaleServiceApi） */
     private final com.example.minimall.feign.OrderFeignClient orderFeignClient;
-    /** HTTP 客户端 */
-    private final RestTemplate restTemplate;
+    /** Spring AI 统一聊天客户端（阶段二：生成层框架化，替代手写 HTTP/JSON 调用） */
+    private final ChatClient chatClient;
     /** RAG 检索增强生成服务 */
     private final RagService ragService;
     /** 多轮对话管理服务 */
@@ -65,6 +58,7 @@ public class AIService {
                      DeepSeekConfig deepSeekConfig,
                      com.example.minimall.feign.ProductFeignClient productFeignClient,
                      com.example.minimall.feign.OrderFeignClient orderFeignClient,
+                     ChatClient chatClient,
                      RagService ragService,
                      ConversationService conversationService,
                      IntentClassifierService intentClassifierService,
@@ -76,6 +70,7 @@ public class AIService {
         this.deepSeekConfig = deepSeekConfig;
         this.productFeignClient = productFeignClient;
         this.orderFeignClient = orderFeignClient;
+        this.chatClient = chatClient;
         this.ragService = ragService;
         this.conversationService = conversationService;
         this.intentClassifierService = intentClassifierService;
@@ -83,32 +78,6 @@ public class AIService {
         this.productContextOptimizer = productContextOptimizer;
         this.ragMonitorService = ragMonitorService;
         this.seedFAQInitializer = seedFAQInitializer;
-        this.restTemplate = createRestTemplate();
-    }
-
-    // 创建带有连接池和超时配置的RestTemplate
-    private RestTemplate createRestTemplate() {
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(10000))
-                .setConnectionRequestTimeout(Timeout.ofMilliseconds(10000))
-                .setResponseTimeout(Timeout.ofMilliseconds(30000))
-                .build();
-
-        PoolingHttpClientConnectionManager connectionManager = new PoolingHttpClientConnectionManager();
-        connectionManager.setMaxTotal(20);
-        connectionManager.setDefaultMaxPerRoute(10);
-
-        CloseableHttpClient httpClient = HttpClients.custom()
-                .setConnectionManager(connectionManager)
-                .setDefaultRequestConfig(requestConfig)
-                .build();
-
-        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(httpClient);
-        factory.setConnectTimeout(10000);
-        factory.setReadTimeout(30000);
-        factory.setConnectionRequestTimeout(10000);
-
-        return new RestTemplate(factory);
     }
 
     private static final Map<String, String[]> CATEGORY_KEYWORDS = new LinkedHashMap<>();
@@ -410,96 +379,30 @@ public class AIService {
                 String productContext = buildProductContext(limitedProducts);
                 String systemPrompt = buildSystemPrompt(finalServiceType, productContext);
 
-                Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("model", deepSeekConfig.getModel());
-                requestBody.put("temperature", deepSeekConfig.getTemperature());
-                requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
-                requestBody.put("stream", true);
+                logger.info("请求DeepSeek API(Spring AI流式): model={}", deepSeekConfig.getModel());
 
-                Map<String, String> thinking = new HashMap<>();
-                thinking.put("type", "disabled");
-                requestBody.put("thinking", thinking);
-
-                List<Map<String, String>> messages = new ArrayList<>();
-                Map<String, String> sysMsg = new HashMap<>();
-                sysMsg.put("role", "system");
-                sysMsg.put("content", systemPrompt);
-                messages.add(sysMsg);
-
-                Map<String, String> userMsg = new HashMap<>();
-                userMsg.put("role", "user");
-                userMsg.put("content", finalQuery);
-                messages.add(userMsg);
-
-                requestBody.put("messages", messages);
-
-                String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
-                logger.info("请求DeepSeek API: URL={}, model={}", deepSeekConfig.getApiUrl(), deepSeekConfig.getModel());
-
-                org.apache.hc.client5.http.classic.methods.HttpPost httpPost =
-                    new org.apache.hc.client5.http.classic.methods.HttpPost(deepSeekConfig.getApiUrl());
-                httpPost.setHeader("Content-Type", "application/json");
-                httpPost.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
-                httpPost.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity(requestJson, org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
-
-                RequestConfig requestConfig = RequestConfig.custom()
-                    .setConnectTimeout(Timeout.ofMilliseconds(10000))
-                    .setResponseTimeout(Timeout.ofMilliseconds(60000))
-                    .build();
-
-                try (CloseableHttpClient httpClient = HttpClients.custom()
-                        .setDefaultRequestConfig(requestConfig)
-                        .build()) {
-
-                    org.apache.hc.client5.http.impl.classic.CloseableHttpResponse response = httpClient.execute(httpPost);
-                    int statusCode = response.getCode();
-                    logger.info("DeepSeek API响应状态码: {}", statusCode);
-
-                    if (statusCode != 200) {
-                        StringBuilder errorBody = new StringBuilder();
-                        try (BufferedReader errorReader = new BufferedReader(
-                                new InputStreamReader(response.getEntity().getContent(), "UTF-8"))) {
-                            String errorLine;
-                            while ((errorLine = errorReader.readLine()) != null) {
-                                errorBody.append(errorLine);
-                            }
-                        }
-                        logger.error("DeepSeek API返回错误: status={}, body={}", statusCode, errorBody.toString());
-                        throw new RuntimeException("DeepSeek API返回错误状态码: " + statusCode + ", 响应: " + errorBody.toString());
-                    }
-
-                    BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
-
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith("data: ") && !line.equals("data: [DONE]")) {
-                            String jsonData = line.substring(6);
+                // Spring AI 流式调用：stream().content() 返回 Flux<String>，每个元素为增量 token；
+                // blockLast() 在异步线程内阻塞等待流完成，保持原有同步语义（异常由外层 catch 兜底）
+                chatClient.prompt()
+                        .system(systemPrompt)
+                        .user(finalQuery)
+                        .options(ChatOptions.builder()
+                                .temperature(deepSeekConfig.getTemperature())
+                                .maxTokens(deepSeekConfig.getMaxTokens())
+                                .build())
+                        .stream()
+                        .content()
+                        .doOnNext(token -> {
+                            fullResponse.append(token);
+                            Map<String, String> event = new HashMap<>();
+                            event.put("token", token);
                             try {
-                                JsonNode node = OBJECT_MAPPER.readTree(jsonData);
-                                JsonNode choices = node.get("choices");
-                                if (choices != null && choices.isArray() && choices.size() > 0) {
-                                    JsonNode delta = choices.get(0).get("delta");
-                                    if (delta != null) {
-                                        JsonNode content = delta.get("content");
-                                        if (content != null && content.isTextual()) {
-                                            String token = content.asText();
-                                            fullResponse.append(token);
-                                            Map<String, String> event = new HashMap<>();
-                                            event.put("token", token);
-                                            emitter.send(SseEmitter.event()
-                                                .name("token")
-                                                .data(event));
-                                        }
-                                    }
-                                }
+                                emitter.send(SseEmitter.event().name("token").data(event));
                             } catch (Exception e) {
-                                logger.warn("解析SSE数据失败: {}", e.getMessage());
+                                logger.warn("发送token事件失败: {}", e.getMessage());
                             }
-                        }
-                    }
-                    reader.close();
-                }
+                        })
+                        .blockLast();
 
                 String cleanedResponse = fullResponse.toString()
                     .replaceAll("###+", " ")
@@ -1069,58 +972,7 @@ public class AIService {
     // 调用DeepSeek API获取AI回复
     private String callDeepSeekAPI(String query, Integer serviceType, String productContext) throws Exception {
         String systemPrompt = buildSystemPrompt(serviceType, productContext);
-        
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", deepSeekConfig.getModel());
-        requestBody.put("temperature", deepSeekConfig.getTemperature());
-        requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
-        
-        List<Map<String, Object>> messages = new ArrayList<>();
-        
-        Map<String, Object> systemMessage = new HashMap<>();
-        systemMessage.put("role", "system");
-        systemMessage.put("content", systemPrompt);
-        messages.add(systemMessage);
-        
-        Map<String, Object> userMessage = new HashMap<>();
-        userMessage.put("role", "user");
-        userMessage.put("content", query);
-        messages.add(userMessage);
-        
-        requestBody.put("messages", messages);
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(deepSeekConfig.getApiKey());
-        
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-        
-        ResponseEntity<String> responseEntity = restTemplate.postForEntity(
-                deepSeekConfig.getApiUrl(), requestEntity, String.class);
-        
-        ObjectMapper mapper = OBJECT_MAPPER;
-        JsonNode rootNode = mapper.readTree(responseEntity.getBody());
-        JsonNode choicesNode = rootNode.get("choices");
-        if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
-            JsonNode messageNode = choicesNode.get(0).get("message");
-            if (messageNode != null) {
-                JsonNode contentNode = messageNode.get("content");
-                if (contentNode != null && contentNode.isTextual()) {
-                    String rawResponse = contentNode.asText();
-                    String cleanedResponse = rawResponse
-                            .replaceAll("###+", " ")
-                            .replaceAll("\\*\\*", "")
-                            .replaceAll("__", "")
-                            .replaceAll("(?m)^- ", "")
-                            .replaceAll("(?m)^#+ ", "")
-                            .replaceAll("\\n\\s+\\n", "\\n")
-                            .trim();
-                    return cleanedResponse;
-                }
-            }
-        }
-        
-        return defaultResponse(query);
+        return callDeepSeekAPIWithPrompt(query, systemPrompt);
     }
 
     // 带用户ID的本地回复生成
@@ -1703,77 +1555,29 @@ public class AIService {
                     systemPrompt = buildSystemPrompt(finalServiceType, productContext);
                 }
 
-                // 5. 流式调用 DeepSeek API
-                Map<String, Object> requestBody = new HashMap<>();
-                requestBody.put("model", deepSeekConfig.getModel());
-                requestBody.put("temperature", deepSeekConfig.getTemperature());
-                requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
-                requestBody.put("stream", true);
+                // 5. 流式调用 DeepSeek API（Spring AI 流式）
+                logger.info("请求DeepSeek API(Spring AI流式/RAG): model={}", deepSeekConfig.getModel());
 
-                Map<String, String> thinking = new HashMap<>();
-                thinking.put("type", "disabled");
-                requestBody.put("thinking", thinking);
-
-                List<Map<String, String>> messages = new ArrayList<>();
-                Map<String, String> sysMsg = new HashMap<>();
-                sysMsg.put("role", "system");
-                sysMsg.put("content", systemPrompt);
-                messages.add(sysMsg);
-                Map<String, String> userMsg = new HashMap<>();
-                userMsg.put("role", "user");
-                userMsg.put("content", finalQuery);
-                messages.add(userMsg);
-                requestBody.put("messages", messages);
-
-                String requestJson = OBJECT_MAPPER.writeValueAsString(requestBody);
-                org.apache.hc.client5.http.classic.methods.HttpPost httpPost =
-                        new org.apache.hc.client5.http.classic.methods.HttpPost(deepSeekConfig.getApiUrl());
-                httpPost.setHeader("Content-Type", "application/json");
-                httpPost.setHeader("Authorization", "Bearer " + deepSeekConfig.getApiKey());
-                httpPost.setEntity(new org.apache.hc.core5.http.io.entity.StringEntity(requestJson, org.apache.hc.core5.http.ContentType.APPLICATION_JSON));
-
-                RequestConfig requestConfig = RequestConfig.custom()
-                        .setConnectTimeout(Timeout.ofMilliseconds(10000)).setResponseTimeout(Timeout.ofMilliseconds(60000)).build();
-
-                try (CloseableHttpClient httpClient = HttpClients.custom()
-                        .setDefaultRequestConfig(requestConfig).build()) {
-                    org.apache.hc.client5.http.impl.classic.CloseableHttpResponse response = httpClient.execute(httpPost);
-                    int statusCode = response.getCode();
-
-                    if (statusCode != 200) {
-                        throw new RuntimeException("DeepSeek API返回错误状态码: " + statusCode);
-                    }
-
-                    // 使用 try-with-resources 确保 reader 在异常时也能正确关闭，避免连接泄漏
-                    try (BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(response.getEntity().getContent(), "UTF-8"))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (line.startsWith("data: ") && !line.equals("data: [DONE]")) {
-                                String jsonData = line.substring(6);
-                                try {
-                                    JsonNode node = OBJECT_MAPPER.readTree(jsonData);
-                                    JsonNode choices = node.get("choices");
-                                    if (choices != null && choices.isArray() && choices.size() > 0) {
-                                        JsonNode delta = choices.get(0).get("delta");
-                                        if (delta != null) {
-                                            JsonNode content = delta.get("content");
-                                            if (content != null && content.isTextual()) {
-                                                String token = content.asText();
-                                                fullResponse.append(token);
-                                                Map<String, String> event = new HashMap<>();
-                                                event.put("token", token);
-                                                emitter.send(SseEmitter.event().name("token").data(event));
-                                            }
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    logger.warn("解析SSE数据失败: {}", e.getMessage());
-                                }
+                chatClient.prompt()
+                        .system(systemPrompt)
+                        .user(finalQuery)
+                        .options(ChatOptions.builder()
+                                .temperature(deepSeekConfig.getTemperature())
+                                .maxTokens(deepSeekConfig.getMaxTokens())
+                                .build())
+                        .stream()
+                        .content()
+                        .doOnNext(token -> {
+                            fullResponse.append(token);
+                            Map<String, String> event = new HashMap<>();
+                            event.put("token", token);
+                            try {
+                                emitter.send(SseEmitter.event().name("token").data(event));
+                            } catch (Exception e) {
+                                logger.warn("发送token事件失败: {}", e.getMessage());
                             }
-                        }
-                    }
-                }
+                        })
+                        .blockLast();
 
                 String cleanedResponse = fullResponse.toString()
                         .replaceAll("###+", " ")
@@ -1884,54 +1688,41 @@ public class AIService {
     }
 
     /**
-     * 使用指定系统提示词调用 DeepSeek API
+     * 使用指定系统提示词调用 DeepSeek API（Spring AI ChatClient 实现，阶段二）
+     *
+     * <p>替换原手写 RestTemplate + JSON 解析：模型切换、流式/结构化输出由框架接管，
+     * 业务侧只需拼 prompt 取文本。temperature/maxTokens 仍由业务配置(deepseek.*)驱动。
      */
     private String callDeepSeekAPIWithPrompt(String query, String systemPrompt) throws Exception {
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", deepSeekConfig.getModel());
-        requestBody.put("temperature", deepSeekConfig.getTemperature());
-        requestBody.put("max_tokens", deepSeekConfig.getMaxTokens());
-
-        List<Map<String, Object>> messages = new ArrayList<>();
-        Map<String, Object> systemMessage = new HashMap<>();
-        systemMessage.put("role", "system");
-        systemMessage.put("content", systemPrompt);
-        messages.add(systemMessage);
-
-        Map<String, Object> userMessage = new HashMap<>();
-        userMessage.put("role", "user");
-        userMessage.put("content", query);
-        messages.add(userMessage);
-
-        requestBody.put("messages", messages);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setBearerAuth(deepSeekConfig.getApiKey());
-
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-        ResponseEntity<String> responseEntity = restTemplate.postForEntity(
-                deepSeekConfig.getApiUrl(), requestEntity, String.class);
-
-        ObjectMapper mapper = OBJECT_MAPPER;
-        JsonNode rootNode = mapper.readTree(responseEntity.getBody());
-        JsonNode choicesNode = rootNode.get("choices");
-        if (choicesNode != null && choicesNode.isArray() && choicesNode.size() > 0) {
-            JsonNode messageNode = choicesNode.get(0).get("message");
-            if (messageNode != null) {
-                JsonNode contentNode = messageNode.get("content");
-                if (contentNode != null && contentNode.isTextual()) {
-                    return contentNode.asText()
-                            .replaceAll("###+", " ")
-                            .replaceAll("\\*\\*", "")
-                            .replaceAll("__", "")
-                            .replaceAll("(?m)^- ", "")
-                            .replaceAll("(?m)^#+ ", "")
-                            .replaceAll("\\n\\s+\\n", "\\n")
-                            .trim();
-                }
-            }
+        String rawResponse;
+        try {
+            rawResponse = chatClient.prompt()
+                    .system(systemPrompt)
+                    .user(query)
+                    .options(ChatOptions.builder()
+                            .temperature(deepSeekConfig.getTemperature())
+                            .maxTokens(deepSeekConfig.getMaxTokens())
+                            .build())
+                    .call()
+                    .content();
+        } catch (Exception e) {
+            // 与旧实现一致的失败兜底语义：调用异常时返回本地兜底回复，不把异常抛给前端
+            logger.error("DeepSeek API 调用失败: {}", e.getMessage());
+            return defaultResponse(query);
         }
-        return defaultResponse(query);
+
+        if (rawResponse == null || rawResponse.isBlank()) {
+            return defaultResponse(query);
+        }
+
+        // 保留原有 Markdown 符号清洗逻辑
+        return rawResponse
+                .replaceAll("###+", " ")
+                .replaceAll("\\*\\*", "")
+                .replaceAll("__", "")
+                .replaceAll("(?m)^- ", "")
+                .replaceAll("(?m)^#+ ", "")
+                .replaceAll("\\n\\s+\\n", "\\n")
+                .trim();
     }
 }

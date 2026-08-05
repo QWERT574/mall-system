@@ -506,7 +506,8 @@ public class AIService {
 
 ### 阶段二（Spring AI）状态
 
-- [ ] ai-service 引入 spring-ai-bom 1.0.0 + spring-ai-starter-model-deepseek
-- [ ] AIService 裸 HTTP → ChatClient（保留自研检索链路）
-- [ ] 流式 SSE + 结构化输出 demo
-- [ ] 模型切换（DeepSeek→Ollama）演示
+- [x] ai-service 引入 spring-ai-bom 1.0.0 + spring-ai-starter-model-deepseek
+- [x] AIService 裸 HTTP → ChatClient（保留自研检索链路：filterProductsByQuery/buildProductContext/RAG 检索全保留）
+- [x] 流式 SSE 输出：handleQueryStream + RAG 流式两处手写 hc5 SSE 解析 → ChatClient.stream().content() + blockLast()
+- [ ] 模型切换（DeepSeek→Ollama）演示（可选，改 yml base-url/api-key 即可，框架天然支持）
+- [ ] 运行时验证：需 Nacos/Redis 环境 + DEEPSEEK_API_KEY（本地环境受限，编译级验证已过）
