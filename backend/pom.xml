@@ -159,11 +159,11 @@
     <!-- ======================================================= -->
 
     <!-- 公共模块：Result、JWT、枚举、异常、DTO -->
-    <dependency>
-      <groupId>com.example</groupId>
-      <artifactId>minimall-common</artifactId>
-      <version>0.0.1-SNAPSHOT</version>
-    </dependency>
+<!--    <dependency>-->
+<!--      <groupId>com.example</groupId>-->
+<!--      <artifactId>minimall-common</artifactId>-->
+<!--      <version>0.0.1-SNAPSHOT</version>-->
+<!--    </dependency>-->
 
     <!-- 测试依赖 -->
     <dependency>
